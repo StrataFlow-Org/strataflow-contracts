@@ -69,6 +69,26 @@ stateDiagram-v2
 
 ---
 
+## 🚀 Stellar Testnet Deployment Details
+
+The StrataFlow core protocol contract is officially deployed and live on Stellar Testnet:
+
+| Parameter | Value |
+|---|---|
+| **Contract ID** | `CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J` |
+| **Network** | Stellar Testnet (`Test SDF Network ; September 2015`) |
+| **RPC Endpoint** | `https://soroban-testnet.stellar.org` |
+| **Admin Public Key** | `GBWFZHBYEKF5MR2MHW7JAZX6ZRI2PKKBL6IALEMJSBMU4JMDSIB34KP5` |
+| **WASM Hash** | `3cf260524d911a16c0012bf650f5d1453793ddf4362710d602e869956e5147fb` |
+| **Contract Version** | `1.0.0` |
+| **Circuit Breaker Status** | `Unpaused (Active)` |
+| **Deployment Tx** | [`25bf399a...8988`](https://stellar.expert/explorer/testnet/tx/25bf399a52be5f942e9f62c965f0e8d6a0800db0673f79d779bc79f3b4378988) |
+| **Initialization Tx** | [`cf2cfe25...b6ee`](https://stellar.expert/explorer/testnet/tx/cf2cfe25015e36bd7740f4fc9d13947d2425bbd83be23c88b574e7b8eae1b6ee) |
+| **Stellar Expert** | [Explore Contract on StellarExpert](https://stellar.expert/explorer/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
+| **Stellar Lab** | [Inspect in Stellar Lab](https://lab.stellar.org/r/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
+
+---
+
 ## 🧪 Local Testing
 
 Compile the test harness and execute unit tests:
