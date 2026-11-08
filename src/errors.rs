@@ -20,4 +20,5 @@ pub enum Error {
     MilestoneOutOfOrder = 14,
     DeadlineNotPassed = 15,
     CannotCancelFunded = 16,
+    InvalidFeeBps = 17,
 }
