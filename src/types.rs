@@ -79,4 +79,6 @@ pub enum DataKey {
     Admin,
     AgreementCounter,
     Agreement(u64),
+    IsPaused,
+    PendingAdmin,
 }
