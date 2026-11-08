@@ -58,6 +58,12 @@ fn test_create_fund_and_release_flow() {
     );
 
     assert_eq!(agreement_id, 1);
+    assert!(client.has_agreement(&1));
+
+    let summary = client.get_agreement_summary(&1);
+    assert_eq!(summary.total_amount, 1000);
+    assert_eq!(summary.milestones_count, 2);
+
     let agreement = client.get_agreement(&1);
     assert_eq!(agreement.total_amount, 1000);
     assert_eq!(agreement.balance, 0);
@@ -145,7 +151,7 @@ fn test_dispute_and_resolution_flow() {
     let disputed_agreement = client.get_agreement(&agreement_id);
     assert_eq!(disputed_agreement.status, AgreementStatus::Disputed);
 
-    // Arbiter splits 50/50
+    // Arbiter splits exact balance 500/500
     client.resolve_dispute(&agreement_id, &500, &500);
     let resolved_agreement = client.get_agreement(&agreement_id);
     assert_eq!(resolved_agreement.status, AgreementStatus::Resolved);
@@ -154,3 +160,48 @@ fn test_dispute_and_resolution_flow() {
     assert_eq!(token_client.balance(&provider_addr), 500);
 }
 
+#[test]
+#[should_panic(expected = "Error(Contract, #11)")]
+fn test_dispute_invalid_split_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Full delivery"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&agreement_id, &client_addr);
+    client.raise_dispute(&agreement_id, &0, &client_addr);
+
+    // Partial split (300 + 300 = 600 != 1000 balance) should panic with InvalidSplit
+    client.resolve_dispute(&agreement_id, &300, &300);
+}
