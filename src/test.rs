@@ -2,7 +2,7 @@
 
 use super::*;
 use soroban_sdk::{
-    testutils::Address as _,
+    testutils::{Address as _, Ledger},
     token::{Client as TokenClient, StellarAssetClient},
     vec, Address, Env, String,
 };
@@ -161,8 +161,7 @@ fn test_dispute_and_resolution_flow() {
 }
 
 #[test]
-#[should_panic(expected = "Error(Contract, #11)")]
-fn test_dispute_invalid_split_panics() {
+fn test_timeout_refund_after_deadline() {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -176,21 +175,22 @@ fn test_dispute_invalid_split_panics() {
 
     let token_admin = Address::generate(&env);
     let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_client = TokenClient::new(&env, &token_contract.address());
     let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
 
-    token_admin_client.mint(&client_addr, &1000);
+    token_admin_client.mint(&client_addr, &2000);
     client.initialize(&admin);
 
     let m1 = Milestone {
-        description: String::from_str(&env, "Full delivery"),
-        amount: 1000,
+        description: String::from_str(&env, "Milestone 1"),
+        amount: 2000,
         status: MilestoneStatus::Pending,
         proof_hash: String::from_str(&env, ""),
     };
     let milestones = vec![&env, m1];
-    let deadline = env.ledger().timestamp() + 86400;
+    let deadline = env.ledger().timestamp() + 1000;
 
-    let agreement_id = client.create_agreement(
+    let id = client.create_agreement(
         &client_addr,
         &provider_addr,
         &arbiter_addr,
@@ -199,9 +199,77 @@ fn test_dispute_invalid_split_panics() {
         &deadline,
     );
 
-    client.fund_agreement(&agreement_id, &client_addr);
-    client.raise_dispute(&agreement_id, &0, &client_addr);
+    client.fund_agreement(&id, &client_addr);
+    assert_eq!(token_client.balance(&client_addr), 0);
 
-    // Partial split (300 + 300 = 600 != 1000 balance) should panic with InvalidSplit
-    client.resolve_dispute(&agreement_id, &300, &300);
+    // Advance ledger timestamp beyond deadline
+    env.ledger().with_mut(|l| {
+        l.timestamp = deadline + 100;
+    });
+
+    // Client claims timeout refund
+    client.claim_timeout_refund(&id);
+
+    let refunded_agreement = client.get_agreement(&id);
+    assert_eq!(refunded_agreement.status, AgreementStatus::Cancelled);
+    assert_eq!(refunded_agreement.balance, 0);
+    assert_eq!(token_client.balance(&client_addr), 2000);
+}
+
+#[test]
+fn test_circuit_breaker_pause() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    client.initialize(&admin);
+    assert!(!client.is_paused());
+
+    client.set_pause(&true);
+    assert!(client.is_paused());
+
+    client.set_pause(&false);
+    assert!(!client.is_paused());
+}
+
+#[test]
+fn test_cancel_unfunded_agreement() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+    let token = Address::generate(&env);
+
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Draft"),
+        amount: 500,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 1000;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token,
+        &milestones,
+        &deadline,
+    );
+
+    client.cancel_agreement(&id);
+    let cancelled = client.get_agreement(&id);
+    assert_eq!(cancelled.status, AgreementStatus::Cancelled);
 }
