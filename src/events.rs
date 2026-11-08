@@ -41,3 +41,31 @@ pub fn publish_resolve(env: &Env, agreement_id: u64, client_amount: i128, provid
         (client_amount, provider_amount),
     );
 }
+
+pub fn publish_refund(env: &Env, agreement_id: u64, client: Address, amount: i128) {
+    env.events().publish(
+        (symbol_short!("refund"), agreement_id),
+        (client, amount),
+    );
+}
+
+pub fn publish_cancel(env: &Env, agreement_id: u64, client: Address) {
+    env.events().publish(
+        (symbol_short!("cancel"), agreement_id),
+        client,
+    );
+}
+
+pub fn publish_pause(env: &Env, paused: bool) {
+    env.events().publish(
+        (symbol_short!("pause"),),
+        paused,
+    );
+}
+
+pub fn publish_admin_transfer(env: &Env, old_admin: Address, new_admin: Address) {
+    env.events().publish(
+        (symbol_short!("admin"),),
+        (old_admin, new_admin),
+    );
+}
