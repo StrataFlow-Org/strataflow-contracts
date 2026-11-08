@@ -4,7 +4,7 @@ use super::*;
 use soroban_sdk::{
     testutils::Address as _,
     token::{Client as TokenClient, StellarAssetClient},
-    vec, Env, String,
+    vec, Address, Env, String,
 };
 
 #[test]
