@@ -16,7 +16,9 @@ impl StrataFlowContract {
         }
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::AgreementCounter, &0u64);
+        env.storage()
+            .instance()
+            .set(&DataKey::AgreementCounter, &0u64);
         env.storage().instance().set(&DataKey::IsPaused, &false);
         bump_instance_ttl(&env);
         Ok(())
@@ -89,7 +91,8 @@ impl StrataFlowContract {
         admin.require_auth();
         bump_instance_ttl(&env);
 
-        env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
         publish_upgrade(&env, new_wasm_hash);
         Ok(())
     }
@@ -180,7 +183,9 @@ impl StrataFlowContract {
         };
 
         save_agreement(&env, &agreement);
-        env.storage().instance().set(&DataKey::AgreementCounter, &counter);
+        env.storage()
+            .instance()
+            .set(&DataKey::AgreementCounter, &counter);
 
         publish_create(&env, counter, client, provider, total_amount);
 
@@ -207,7 +212,11 @@ impl StrataFlowContract {
         }
 
         let token_client = token::Client::new(&env, &agreement.token);
-        token_client.transfer(&funder, &env.current_contract_address(), &agreement.total_amount);
+        token_client.transfer(
+            &funder,
+            &env.current_contract_address(),
+            &agreement.total_amount,
+        );
 
         agreement.balance = agreement.total_amount;
         agreement.status = AgreementStatus::Funded;
@@ -283,11 +292,7 @@ impl StrataFlowContract {
     }
 
     /// Client approves and releases payment for a submitted milestone (Checks-Effects-Interactions + Protocol Fee)
-    pub fn release_milestone(
-        env: Env,
-        agreement_id: u64,
-        milestone_idx: u32,
-    ) -> Result<(), Error> {
+    pub fn release_milestone(env: Env, agreement_id: u64, milestone_idx: u32) -> Result<(), Error> {
         bump_instance_ttl(&env);
         let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
@@ -302,7 +307,9 @@ impl StrataFlowContract {
         }
 
         let mut milestone = agreement.milestones.get(milestone_idx).unwrap();
-        if milestone.status != MilestoneStatus::Submitted && milestone.status != MilestoneStatus::Pending {
+        if milestone.status != MilestoneStatus::Submitted
+            && milestone.status != MilestoneStatus::Pending
+        {
             return Err(Error::InvalidStatus);
         }
 
@@ -332,7 +339,8 @@ impl StrataFlowContract {
         save_agreement(&env, &agreement);
 
         // Calculate protocol fee deduction if configured
-        let fee_config: Option<ProtocolFeeConfig> = env.storage().instance().get(&DataKey::FeeConfig);
+        let fee_config: Option<ProtocolFeeConfig> =
+            env.storage().instance().get(&DataKey::FeeConfig);
         let (fee_amount, provider_payout) = if let Some(ref cfg) = fee_config {
             let fee = (release_amount * cfg.fee_bps as i128) / 10000;
             (fee, release_amount - fee)
@@ -352,12 +360,14 @@ impl StrataFlowContract {
 
         if fee_amount > 0 {
             if let Some(ref cfg) = fee_config {
-                token_client.transfer(
-                    &env.current_contract_address(),
-                    &cfg.recipient,
-                    &fee_amount,
+                token_client.transfer(&env.current_contract_address(), &cfg.recipient, &fee_amount);
+                publish_fee_deducted(
+                    &env,
+                    agreement_id,
+                    milestone_idx,
+                    cfg.recipient.clone(),
+                    fee_amount,
                 );
-                publish_fee_deducted(&env, agreement_id, milestone_idx, cfg.recipient.clone(), fee_amount);
             }
         }
 
@@ -491,9 +501,16 @@ impl StrataFlowContract {
     }
 
     /// Query specific milestone details
-    pub fn get_milestone(env: Env, agreement_id: u64, milestone_idx: u32) -> Result<Milestone, Error> {
+    pub fn get_milestone(
+        env: Env,
+        agreement_id: u64,
+        milestone_idx: u32,
+    ) -> Result<Milestone, Error> {
         let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
-        agreement.milestones.get(milestone_idx).ok_or(Error::InvalidMilestone)
+        agreement
+            .milestones
+            .get(milestone_idx)
+            .ok_or(Error::InvalidMilestone)
     }
 
     /// Query total milestone count for an agreement

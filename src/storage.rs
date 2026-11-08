@@ -8,9 +8,11 @@ pub fn bump_instance_ttl(env: &Env) {
 }
 
 pub fn bump_persistent_ttl(env: &Env, key: &DataKey) {
-    env.storage()
-        .persistent()
-        .extend_ttl(key, PERSISTENT_LIFETIME_THRESHOLD, PERSISTENT_BUMP_AMOUNT);
+    env.storage().persistent().extend_ttl(
+        key,
+        PERSISTENT_LIFETIME_THRESHOLD,
+        PERSISTENT_BUMP_AMOUNT,
+    );
 }
 
 pub fn save_agreement(env: &Env, agreement: &Agreement) {

@@ -84,7 +84,10 @@ fn test_create_fund_and_release_flow() {
     assert_eq!(token_client.balance(&contract_id), 1000);
 
     // Submit milestone 0
-    let proof = String::from_str(&env, "ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco");
+    let proof = String::from_str(
+        &env,
+        "ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco",
+    );
     client.submit_milestone(&1, &0, &proof);
 
     let submitted_agreement = client.get_agreement(&1);
@@ -554,5 +557,3 @@ fn test_emergency_pause_rejects_deposits() {
     // Attempting to fund paused agreement must panic with EmergencyPaused
     client.fund_agreement(&id, &client_addr);
 }
-
-

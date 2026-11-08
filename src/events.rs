@@ -1,6 +1,12 @@
 use soroban_sdk::{symbol_short, Address, BytesN, Env, String};
 
-pub fn publish_create(env: &Env, agreement_id: u64, client: Address, provider: Address, total_amount: i128) {
+pub fn publish_create(
+    env: &Env,
+    agreement_id: u64,
+    client: Address,
+    provider: Address,
+    total_amount: i128,
+) {
     env.events().publish(
         (symbol_short!("create"), agreement_id),
         (client, provider, total_amount),
@@ -43,41 +49,36 @@ pub fn publish_resolve(env: &Env, agreement_id: u64, client_amount: i128, provid
 }
 
 pub fn publish_refund(env: &Env, agreement_id: u64, client: Address, amount: i128) {
-    env.events().publish(
-        (symbol_short!("refund"), agreement_id),
-        (client, amount),
-    );
+    env.events()
+        .publish((symbol_short!("refund"), agreement_id), (client, amount));
 }
 
 pub fn publish_cancel(env: &Env, agreement_id: u64, client: Address) {
-    env.events().publish(
-        (symbol_short!("cancel"), agreement_id),
-        client,
-    );
+    env.events()
+        .publish((symbol_short!("cancel"), agreement_id), client);
 }
 
 pub fn publish_pause(env: &Env, paused: bool) {
-    env.events().publish(
-        (symbol_short!("pause"),),
-        paused,
-    );
+    env.events().publish((symbol_short!("pause"),), paused);
 }
 
 pub fn publish_admin_transfer(env: &Env, old_admin: Address, new_admin: Address) {
-    env.events().publish(
-        (symbol_short!("admin"),),
-        (old_admin, new_admin),
-    );
+    env.events()
+        .publish((symbol_short!("admin"),), (old_admin, new_admin));
 }
 
 pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
-    env.events().publish(
-        (symbol_short!("fee_cfg"),),
-        (fee_bps, recipient),
-    );
+    env.events()
+        .publish((symbol_short!("fee_cfg"),), (fee_bps, recipient));
 }
 
-pub fn publish_fee_deducted(env: &Env, agreement_id: u64, milestone_idx: u32, recipient: Address, fee_amount: i128) {
+pub fn publish_fee_deducted(
+    env: &Env,
+    agreement_id: u64,
+    milestone_idx: u32,
+    recipient: Address,
+    fee_amount: i128,
+) {
     env.events().publish(
         (symbol_short!("fee_paid"), agreement_id, milestone_idx),
         (recipient, fee_amount),
@@ -85,8 +86,6 @@ pub fn publish_fee_deducted(env: &Env, agreement_id: u64, milestone_idx: u32, re
 }
 
 pub fn publish_upgrade(env: &Env, new_wasm_hash: BytesN<32>) {
-    env.events().publish(
-        (symbol_short!("upgrade"),),
-        new_wasm_hash,
-    );
+    env.events()
+        .publish((symbol_short!("upgrade"),), new_wasm_hash);
 }
