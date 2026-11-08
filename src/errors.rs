@@ -16,4 +16,8 @@ pub enum Error {
     DeadlinePassed = 10,
     InvalidSplit = 11,
     MilestoneLimitExceeded = 12,
+    ProtocolPaused = 13,
+    MilestoneOutOfOrder = 14,
+    DeadlineNotPassed = 15,
+    CannotCancelFunded = 16,
 }
