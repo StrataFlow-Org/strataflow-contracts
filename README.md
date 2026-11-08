@@ -5,7 +5,7 @@
 [![CI](https://github.com/StrataFlow-Org/strataflow-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
 
 > **Part of the [StrataFlow Protocol](https://github.com/StrataFlow-Org) suite.**  
-> Trustless milestone escrows and programmable settlement on the Stellar network.
+> Trustless milestone escrows and programmable settlement on the Stellar network. Built for Stellar Drips Wave.
 
 ---
 
@@ -17,19 +17,31 @@ In the event of disagreement, a neutral third-party arbiter can resolve disputes
 
 ---
 
+## 🛡️ Security Architecture & Invariants
+
+1. **Persistent Storage with Automatic TTL Extension**: Dynamic agreement vectors are partitioned into `storage().persistent()` entries rather than instance storage, ensuring contract size never approaches Soroban 64KB limits.
+2. **Capital Trapping Remediation (`claim_timeout_refund`)**: If a designated provider fails to deliver milestones before the deadline, the client can reclaim 100% of remaining escrowed funds.
+3. **Emergency Circuit Breaker (`set_pause` / `is_paused`)**: Contract administrator can pause deposits and state changes in the event of an upstream or network anomaly.
+4. **Checks-Effects-Interactions (CEI)**: State mutations and balance decrements occur strictly prior to token transfer invocations.
+5. **Exact Dispute Apportionment**: Arbiters must apportion the exact remaining balance (`client_amount + provider_amount == balance`), preventing residual capital freeze.
+6. **Protocol Fee Ceiling**: Admin fees are capped at a strict maximum of 500 basis points (5%), protecting users against fee gouging.
+
+---
+
 ## 🏗️ State Machine
 
 ```mermaid
 stateDiagram-v2
     [*] --> Created: create_agreement()
     Created --> Funded: fund_agreement()
-    Created --> Cancelled: cancel (pre-funding)
+    Created --> Cancelled: cancel_agreement() [Pre-funding]
     Funded --> InProgress: submit_milestone()
-    InProgress --> Funded: release_milestone() [Partial]
+    InProgress --> Funded: release_milestone() [Partial Approval]
     Funded --> Completed: release_milestone() [All Milestones Approved]
     Funded --> Disputed: raise_dispute()
     InProgress --> Disputed: raise_dispute()
     Disputed --> Resolved: resolve_dispute()
+    Funded --> Cancelled: claim_timeout_refund() [Post-Deadline]
     Completed --> [*]
     Resolved --> [*]
     Cancelled --> [*]
@@ -45,11 +57,15 @@ stateDiagram-v2
 | `create_agreement(...)` | Client | Creates a new escrow agreement with milestones. |
 | `fund_agreement(id, funder)` | Funder / Client | Transfers required SAC tokens to contract storage. |
 | `submit_milestone(id, idx, proof)`| Provider | Submits IPFS deliverable proof for verification. |
-| `release_milestone(id, idx)` | Client | Releases milestone payout to provider. |
+| `release_milestone(id, idx)` | Client | Releases milestone payout minus protocol fee. |
+| `claim_timeout_refund(id)` | Client | Refunds remaining balance if deadline has passed. |
 | `raise_dispute(id, idx, caller)` | Client / Provider | Freezes remaining balance into dispute status. |
 | `resolve_dispute(id, client, provider)`| Arbiter | Distributes contested balance between parties. |
+| `cancel_agreement(id)` | Client | Cancels an unfunded draft agreement. |
+| `set_pause(paused)` | Admin | Triggers emergency pause circuit breaker. |
+| `set_fee_config(fee_bps, recipient)` | Admin | Updates protocol fee (capped at 500 bps / 5%). |
 | `get_agreement(id)` | Public Read | Queries agreement details and milestone progress. |
-| `get_counter()` | Public Read | Returns total agreements created. |
+| `get_contract_version()` | Public Read | Returns semver tuple `(major, minor, patch)`. |
 
 ---
 
@@ -61,24 +77,20 @@ Compile the test harness and execute unit tests:
 cargo test
 ```
 
+Execute Clippy linter:
+
+```bash
+cargo clippy --all-targets -- -A dead_code
+```
+
 Build the optimized Wasm binary:
 
 ```bash
-cargo build --target wasm32-unknown-unknown --release
+cargo rustc --target wasm32-unknown-unknown --release --crate-type cdylib
 ```
-
----
-
-## 🌐 Deployed Networks
-
-| Network | Contract ID | RPC Endpoint |
-| :--- | :--- | :--- |
-| **Stellar Testnet** | *Pending Wave Deployment* | `https://soroban-testnet.stellar.org` |
-| **Stellar Mainnet** | *Coming Soon* | `https://mainnet.sorobanrpc.com` |
 
 ---
 
 ## 📄 License
 
 This repository is licensed under the [MIT License](LICENSE).
-
