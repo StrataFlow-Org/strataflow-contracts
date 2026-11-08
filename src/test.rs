@@ -303,3 +303,256 @@ fn test_contract_version() {
     assert_eq!(minor, 0);
     assert_eq!(patch, 0);
 }
+
+#[test]
+fn test_cancellation_unfunded_and_refund() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Draft Scope"),
+        amount: 500,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    let created = client.get_agreement(&id);
+    assert_eq!(created.status, AgreementStatus::Created);
+
+    // Cancel agreement before funding
+    client.cancel_agreement(&id);
+
+    let cancelled = client.get_agreement(&id);
+    assert_eq!(cancelled.status, AgreementStatus::Cancelled);
+}
+
+#[test]
+fn test_multi_milestone_sequential_approval() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_client = TokenClient::new(&env, &token_contract.address());
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &3000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Phase 1: Spec"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let m2 = Milestone {
+        description: String::from_str(&env, "Phase 2: Code"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let m3 = Milestone {
+        description: String::from_str(&env, "Phase 3: Deploy"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+
+    let milestones = vec![&env, m1, m2, m3];
+    let deadline = env.ledger().timestamp() + 86400 * 7;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&id, &client_addr);
+    assert_eq!(client.get_agreement(&id).balance, 3000);
+
+    // Process all 3 milestones sequentially
+    for idx in 0..3 {
+        let proof = String::from_str(&env, "ipfs://proof-hash");
+        client.submit_milestone(&id, &idx, &proof);
+        client.release_milestone(&id, &idx);
+    }
+
+    let final_agreement = client.get_agreement(&id);
+    assert_eq!(final_agreement.balance, 0);
+    assert_eq!(final_agreement.status, AgreementStatus::Completed);
+    assert_eq!(token_client.balance(&provider_addr), 3000);
+}
+
+#[test]
+#[should_panic]
+fn test_dispute_split_mismatch_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Scope"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&id, &client_addr);
+    client.raise_dispute(&id, &0, &client_addr);
+
+    // Attempt to split 500 + 400 = 900 which is less than 1000 balance -> should panic
+    client.resolve_dispute(&id, &500, &400);
+}
+
+#[test]
+#[should_panic]
+fn test_timeout_refund_before_deadline_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Active Project"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400 * 5;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&id, &client_addr);
+
+    // Call refund before deadline -> must panic with DeadlineNotPassed
+    client.claim_timeout_refund(&id);
+}
+
+#[test]
+#[should_panic]
+fn test_emergency_pause_rejects_deposits() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Scope"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    // Emergency pause activated by admin
+    client.set_pause(&true);
+
+    // Attempting to fund paused agreement must panic with EmergencyPaused
+    client.fund_agreement(&id, &client_addr);
+}
+
+
