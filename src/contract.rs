@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::events::*;
+use crate::storage::*;
 use crate::types::*;
 use soroban_sdk::{contract, contractimpl, token, Address, Env, String, Vec};
 
@@ -16,6 +17,7 @@ impl StrataFlowContract {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::AgreementCounter, &0u64);
+        bump_instance_ttl(&env);
         Ok(())
     }
 
@@ -30,15 +32,20 @@ impl StrataFlowContract {
         deadline: u64,
     ) -> Result<u64, Error> {
         client.require_auth();
+        bump_instance_ttl(&env);
 
         if milestones.is_empty() {
             return Err(Error::InvalidMilestone);
         }
 
+        if milestones.len() > MAX_MILESTONES {
+            return Err(Error::MilestoneLimitExceeded);
+        }
+
         let mut total_amount: i128 = 0;
         for i in 0..milestones.len() {
             let m = milestones.get(i).unwrap();
-            if m.amount <= 0 {
+            if m.amount <= 0 || m.description.len() > MAX_DESC_LENGTH {
                 return Err(Error::InvalidMilestone);
             }
             total_amount = total_amount
@@ -67,7 +74,7 @@ impl StrataFlowContract {
             created_at: env.ledger().timestamp(),
         };
 
-        env.storage().instance().set(&DataKey::Agreement(counter), &agreement);
+        save_agreement(&env, &agreement);
         env.storage().instance().set(&DataKey::AgreementCounter, &counter);
 
         publish_create(&env, counter, client, provider, total_amount);
@@ -78,12 +85,9 @@ impl StrataFlowContract {
     /// Deposit funds into the agreement escrow
     pub fn fund_agreement(env: Env, agreement_id: u64, funder: Address) -> Result<(), Error> {
         funder.require_auth();
+        bump_instance_ttl(&env);
 
-        let mut agreement: Agreement = env
-            .storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)?;
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
         if agreement.status != AgreementStatus::Created {
             return Err(Error::InvalidStatus);
@@ -95,7 +99,7 @@ impl StrataFlowContract {
         agreement.balance = agreement.total_amount;
         agreement.status = AgreementStatus::Funded;
 
-        env.storage().instance().set(&DataKey::Agreement(agreement_id), &agreement);
+        save_agreement(&env, &agreement);
 
         publish_fund(&env, agreement_id, funder, agreement.total_amount);
 
@@ -109,11 +113,8 @@ impl StrataFlowContract {
         milestone_idx: u32,
         proof_hash: String,
     ) -> Result<(), Error> {
-        let mut agreement: Agreement = env
-            .storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)?;
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
         agreement.provider.require_auth();
 
@@ -121,7 +122,7 @@ impl StrataFlowContract {
             return Err(Error::InvalidStatus);
         }
 
-        if milestone_idx >= agreement.milestones.len() {
+        if milestone_idx >= agreement.milestones.len() || proof_hash.len() > MAX_PROOF_LENGTH {
             return Err(Error::InvalidMilestone);
         }
 
@@ -134,24 +135,21 @@ impl StrataFlowContract {
         milestone.proof_hash = proof_hash.clone();
         agreement.milestones.set(milestone_idx, milestone);
 
-        env.storage().instance().set(&DataKey::Agreement(agreement_id), &agreement);
+        save_agreement(&env, &agreement);
 
         publish_submit(&env, agreement_id, milestone_idx, proof_hash);
 
         Ok(())
     }
 
-    /// Client approves and releases payment for a submitted milestone
+    /// Client approves and releases payment for a submitted milestone (Checks-Effects-Interactions)
     pub fn release_milestone(
         env: Env,
         agreement_id: u64,
         milestone_idx: u32,
     ) -> Result<(), Error> {
-        let mut agreement: Agreement = env
-            .storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)?;
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
         agreement.client.require_auth();
 
@@ -172,14 +170,8 @@ impl StrataFlowContract {
             return Err(Error::InvalidMilestone);
         }
 
-        let token_client = token::Client::new(&env, &agreement.token);
-        token_client.transfer(
-            &env.current_contract_address(),
-            &agreement.provider,
-            &milestone.amount,
-        );
-
-        agreement.balance -= milestone.amount;
+        let release_amount = milestone.amount;
+        agreement.balance -= release_amount;
         milestone.status = MilestoneStatus::Approved;
         agreement.milestones.set(milestone_idx, milestone);
 
@@ -196,7 +188,15 @@ impl StrataFlowContract {
             agreement.status = AgreementStatus::Completed;
         }
 
-        env.storage().instance().set(&DataKey::Agreement(agreement_id), &agreement);
+        // Commit state changes to persistent storage before transferring external tokens
+        save_agreement(&env, &agreement);
+
+        let token_client = token::Client::new(&env, &agreement.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &agreement.provider,
+            &release_amount,
+        );
 
         publish_release(&env, agreement_id, milestone_idx, agreement.balance);
 
@@ -211,12 +211,9 @@ impl StrataFlowContract {
         caller: Address,
     ) -> Result<(), Error> {
         caller.require_auth();
+        bump_instance_ttl(&env);
 
-        let mut agreement: Agreement = env
-            .storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)?;
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
         if caller != agreement.client && caller != agreement.provider {
             return Err(Error::Unauthorized);
@@ -235,7 +232,7 @@ impl StrataFlowContract {
         agreement.milestones.set(milestone_idx, milestone);
         agreement.status = AgreementStatus::Disputed;
 
-        env.storage().instance().set(&DataKey::Agreement(agreement_id), &agreement);
+        save_agreement(&env, &agreement);
 
         publish_dispute(&env, agreement_id, milestone_idx, caller);
 
@@ -249,11 +246,8 @@ impl StrataFlowContract {
         client_amount: i128,
         provider_amount: i128,
     ) -> Result<(), Error> {
-        let mut agreement: Agreement = env
-            .storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)?;
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
 
         agreement.arbiter.require_auth();
 
@@ -265,9 +259,14 @@ impl StrataFlowContract {
             .checked_add(provider_amount)
             .ok_or(Error::InvalidSplit)?;
 
-        if total_payout > agreement.balance || client_amount < 0 || provider_amount < 0 {
+        // Enforce exact remaining balance distribution to prevent trapped tokens
+        if total_payout != agreement.balance || client_amount < 0 || provider_amount < 0 {
             return Err(Error::InvalidSplit);
         }
+
+        agreement.balance = 0;
+        agreement.status = AgreementStatus::Resolved;
+        save_agreement(&env, &agreement);
 
         let token_client = token::Client::new(&env, &agreement.token);
 
@@ -287,22 +286,37 @@ impl StrataFlowContract {
             );
         }
 
-        agreement.balance -= total_payout;
-        agreement.status = AgreementStatus::Resolved;
-
-        env.storage().instance().set(&DataKey::Agreement(agreement_id), &agreement);
-
         publish_resolve(&env, agreement_id, client_amount, provider_amount);
 
         Ok(())
     }
 
-    /// Query agreement details
+    /// Query agreement details from persistent storage
     pub fn get_agreement(env: Env, agreement_id: u64) -> Result<Agreement, Error> {
-        env.storage()
-            .instance()
-            .get(&DataKey::Agreement(agreement_id))
-            .ok_or(Error::AgreementNotFound)
+        load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)
+    }
+
+    /// Query agreement summary without loading full milestone vector
+    pub fn get_agreement_summary(env: Env, agreement_id: u64) -> Result<AgreementSummary, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(AgreementSummary {
+            id: agreement.id,
+            client: agreement.client,
+            provider: agreement.provider,
+            arbiter: agreement.arbiter,
+            token: agreement.token,
+            total_amount: agreement.total_amount,
+            balance: agreement.balance,
+            status: agreement.status,
+            milestones_count: agreement.milestones.len(),
+            deadline: agreement.deadline,
+            created_at: agreement.created_at,
+        })
+    }
+
+    /// Check if agreement exists
+    pub fn has_agreement(env: Env, agreement_id: u64) -> bool {
+        has_agreement(&env, agreement_id)
     }
 
     /// Get current total agreements count
