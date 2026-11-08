@@ -23,7 +23,7 @@ Thank you for your interest in contributing to the StrataFlow Soroban smart cont
 
 1. **Fork & Clone**:
    ```bash
-   git clone https://github.com/winningtalker-commits/strataflow-contracts.git
+   git clone https://github.com/StrataFlow-Org/strataflow-contracts.git
    cd strataflow-contracts
    ```
 2. **Create a Feature Branch**:

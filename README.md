@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Soroban](https://img.shields.io/badge/Stellar-Soroban%20v21+-blueviolet.svg)](https://stellar.org)
-[![CI](https://github.com/winningtalker-commits/strataflow-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/winningtalker-commits/strataflow-contracts/actions)
+[![CI](https://github.com/StrataFlow-Org/strataflow-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
 
-> **Part of the [StrataFlow Protocol](https://github.com/winningtalker-commits) suite.**  
+> **Part of the [StrataFlow Protocol](https://github.com/StrataFlow-Org) suite.**  
 > Trustless milestone escrows and programmable settlement on the Stellar network.
 
 ---
