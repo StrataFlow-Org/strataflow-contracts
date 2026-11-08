@@ -26,6 +26,9 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
 
+      - name: Clippy checks
+        run: cargo clippy --all-targets -- -A dead_code
+
       - name: Run tests
         run: cargo test
 
