@@ -16,3 +16,4 @@ Please include:
 3. Any proposed mitigations.
 
 We will acknowledge receipt within 48 hours and work with you on remediation prior to public disclosure.
+

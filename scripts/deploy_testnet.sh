@@ -39,3 +39,4 @@ echo "🎉 StrataFlow Deployed Successfully!"
 echo "Contract ID: $CONTRACT_ID"
 echo "Network: $NETWORK"
 echo "Save this CONTRACT_ID to your strataflow-backend and strataflow-web .env files."
+

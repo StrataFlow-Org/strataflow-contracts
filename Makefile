@@ -19,3 +19,4 @@ fmt:
 
 clean:
 	cargo clean
+

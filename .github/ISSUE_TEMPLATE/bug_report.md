@@ -21,3 +21,4 @@ assignees: ''
 - Soroban SDK: v21+
 - Rust: 1.79+
 - Target: wasm32-unknown-unknown
+
