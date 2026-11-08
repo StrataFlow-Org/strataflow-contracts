@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, Address, Env, String};
+use soroban_sdk::{symbol_short, Address, BytesN, Env, String};
 
 pub fn publish_create(env: &Env, agreement_id: u64, client: Address, provider: Address, total_amount: i128) {
     env.events().publish(
@@ -67,5 +67,26 @@ pub fn publish_admin_transfer(env: &Env, old_admin: Address, new_admin: Address)
     env.events().publish(
         (symbol_short!("admin"),),
         (old_admin, new_admin),
+    );
+}
+
+pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
+    env.events().publish(
+        (symbol_short!("fee_cfg"),),
+        (fee_bps, recipient),
+    );
+}
+
+pub fn publish_fee_deducted(env: &Env, agreement_id: u64, milestone_idx: u32, recipient: Address, fee_amount: i128) {
+    env.events().publish(
+        (symbol_short!("fee_paid"), agreement_id, milestone_idx),
+        (recipient, fee_amount),
+    );
+}
+
+pub fn publish_upgrade(env: &Env, new_wasm_hash: BytesN<32>) {
+    env.events().publish(
+        (symbol_short!("upgrade"),),
+        new_wasm_hash,
     );
 }
