@@ -15,4 +15,5 @@ pub enum Error {
     DisputeNotActive = 9,
     DeadlinePassed = 10,
     InvalidSplit = 11,
+    MilestoneLimitExceeded = 12,
 }
