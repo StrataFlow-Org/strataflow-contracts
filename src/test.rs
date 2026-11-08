@@ -60,6 +60,12 @@ fn test_create_fund_and_release_flow() {
     assert_eq!(agreement_id, 1);
     assert!(client.has_agreement(&1));
 
+    let count = client.get_milestones_count(&1);
+    assert_eq!(count, 2);
+
+    let m_query = client.get_milestone(&1, &0);
+    assert_eq!(m_query.amount, 400);
+
     let summary = client.get_agreement_summary(&1);
     assert_eq!(summary.total_amount, 1000);
     assert_eq!(summary.milestones_count, 2);
@@ -236,7 +242,7 @@ fn test_circuit_breaker_pause() {
 }
 
 #[test]
-fn test_cancel_unfunded_agreement() {
+fn test_fee_deduction_on_release() {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -247,29 +253,53 @@ fn test_cancel_unfunded_agreement() {
     let client_addr = Address::generate(&env);
     let provider_addr = Address::generate(&env);
     let arbiter_addr = Address::generate(&env);
-    let token = Address::generate(&env);
+    let fee_recipient = Address::generate(&env);
 
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_client = TokenClient::new(&env, &token_contract.address());
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
     client.initialize(&admin);
 
+    // Set 2.5% protocol fee (250 bps)
+    client.set_fee_config(&250, &fee_recipient);
+
     let m1 = Milestone {
-        description: String::from_str(&env, "Draft"),
-        amount: 500,
+        description: String::from_str(&env, "Milestone with fee"),
+        amount: 1000,
         status: MilestoneStatus::Pending,
         proof_hash: String::from_str(&env, ""),
     };
     let milestones = vec![&env, m1];
-    let deadline = env.ledger().timestamp() + 1000;
+    let deadline = env.ledger().timestamp() + 86400;
 
     let id = client.create_agreement(
         &client_addr,
         &provider_addr,
         &arbiter_addr,
-        &token,
+        &token_contract.address(),
         &milestones,
         &deadline,
     );
 
-    client.cancel_agreement(&id);
-    let cancelled = client.get_agreement(&id);
-    assert_eq!(cancelled.status, AgreementStatus::Cancelled);
+    client.fund_agreement(&id, &client_addr);
+    client.release_milestone(&id, &0);
+
+    // 2.5% of 1000 = 25 fee, 975 to provider
+    assert_eq!(token_client.balance(&fee_recipient), 25);
+    assert_eq!(token_client.balance(&provider_addr), 975);
+}
+
+#[test]
+fn test_contract_version() {
+    let env = Env::default();
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let (major, minor, patch) = client.get_contract_version();
+    assert_eq!(major, 1);
+    assert_eq!(minor, 0);
+    assert_eq!(patch, 0);
 }
