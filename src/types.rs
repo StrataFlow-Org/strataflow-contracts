@@ -1,5 +1,16 @@
 use soroban_sdk::{contracttype, Address, String, Vec};
 
+pub const DAY_IN_LEDGERS: u32 = 17280;
+pub const INSTANCE_BUMP_AMOUNT: u32 = 30 * DAY_IN_LEDGERS;
+pub const INSTANCE_LIFETIME_THRESHOLD: u32 = INSTANCE_BUMP_AMOUNT - DAY_IN_LEDGERS;
+
+pub const PERSISTENT_BUMP_AMOUNT: u32 = 120 * DAY_IN_LEDGERS;
+pub const PERSISTENT_LIFETIME_THRESHOLD: u32 = PERSISTENT_BUMP_AMOUNT - 30 * DAY_IN_LEDGERS;
+
+pub const MAX_MILESTONES: u32 = 25;
+pub const MAX_DESC_LENGTH: u32 = 256;
+pub const MAX_PROOF_LENGTH: u32 = 128;
+
 #[contracttype]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -43,6 +54,22 @@ pub struct Agreement {
     pub balance: i128,
     pub status: AgreementStatus,
     pub milestones: Vec<Milestone>,
+    pub deadline: u64,
+    pub created_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AgreementSummary {
+    pub id: u64,
+    pub client: Address,
+    pub provider: Address,
+    pub arbiter: Address,
+    pub token: Address,
+    pub total_amount: i128,
+    pub balance: i128,
+    pub status: AgreementStatus,
+    pub milestones_count: u32,
     pub deadline: u64,
     pub created_at: u64,
 }
