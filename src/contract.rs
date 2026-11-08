@@ -17,7 +17,55 @@ impl StrataFlowContract {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::AgreementCounter, &0u64);
+        env.storage().instance().set(&DataKey::IsPaused, &false);
         bump_instance_ttl(&env);
+        Ok(())
+    }
+
+    /// Circuit breaker: pause or unpause contract operations
+    pub fn set_pause(env: Env, paused: bool) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        env.storage().instance().set(&DataKey::IsPaused, &paused);
+        publish_pause(&env, paused);
+        Ok(())
+    }
+
+    /// Check if the protocol is currently paused
+    pub fn is_paused(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::IsPaused)
+            .unwrap_or(false)
+    }
+
+    /// Query the protocol admin address
+    pub fn get_admin(env: Env) -> Result<Address, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)
+    }
+
+    /// Transfer contract administrative authority
+    pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        new_admin.require_auth();
+        bump_instance_ttl(&env);
+
+        env.storage().instance().set(&DataKey::Admin, &new_admin);
+        publish_admin_transfer(&env, admin, new_admin);
         Ok(())
     }
 
@@ -31,6 +79,10 @@ impl StrataFlowContract {
         milestones: Vec<Milestone>,
         deadline: u64,
     ) -> Result<u64, Error> {
+        if Self::is_paused(env.clone()) {
+            return Err(Error::ProtocolPaused);
+        }
+
         client.require_auth();
         bump_instance_ttl(&env);
 
@@ -40,6 +92,10 @@ impl StrataFlowContract {
 
         if milestones.len() > MAX_MILESTONES {
             return Err(Error::MilestoneLimitExceeded);
+        }
+
+        if deadline <= env.ledger().timestamp() {
+            return Err(Error::DeadlinePassed);
         }
 
         let mut total_amount: i128 = 0;
@@ -84,6 +140,10 @@ impl StrataFlowContract {
 
     /// Deposit funds into the agreement escrow
     pub fn fund_agreement(env: Env, agreement_id: u64, funder: Address) -> Result<(), Error> {
+        if Self::is_paused(env.clone()) {
+            return Err(Error::ProtocolPaused);
+        }
+
         funder.require_auth();
         bump_instance_ttl(&env);
 
@@ -91,6 +151,10 @@ impl StrataFlowContract {
 
         if agreement.status != AgreementStatus::Created {
             return Err(Error::InvalidStatus);
+        }
+
+        if agreement.deadline <= env.ledger().timestamp() {
+            return Err(Error::DeadlinePassed);
         }
 
         let token_client = token::Client::new(&env, &agreement.token);
@@ -106,7 +170,26 @@ impl StrataFlowContract {
         Ok(())
     }
 
-    /// Provider submits evidence of completion for a specific milestone
+    /// Cancel an unfunded agreement
+    pub fn cancel_agreement(env: Env, agreement_id: u64) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+
+        if agreement.status != AgreementStatus::Created {
+            return Err(Error::CannotCancelFunded);
+        }
+
+        agreement.status = AgreementStatus::Cancelled;
+        save_agreement(&env, &agreement);
+
+        publish_cancel(&env, agreement_id, agreement.client);
+
+        Ok(())
+    }
+
+    /// Provider submits evidence of completion for a specific milestone with sequential ordering
     pub fn submit_milestone(
         env: Env,
         agreement_id: u64,
@@ -124,6 +207,14 @@ impl StrataFlowContract {
 
         if milestone_idx >= agreement.milestones.len() || proof_hash.len() > MAX_PROOF_LENGTH {
             return Err(Error::InvalidMilestone);
+        }
+
+        // Sequential submission rule: prior milestones must be either submitted or approved
+        if milestone_idx > 0 {
+            let prev_milestone = agreement.milestones.get(milestone_idx - 1).unwrap();
+            if prev_milestone.status == MilestoneStatus::Pending {
+                return Err(Error::MilestoneOutOfOrder);
+            }
         }
 
         let mut milestone = agreement.milestones.get(milestone_idx).unwrap();
@@ -188,7 +279,7 @@ impl StrataFlowContract {
             agreement.status = AgreementStatus::Completed;
         }
 
-        // Commit state changes to persistent storage before transferring external tokens
+        // State committed before external token interaction
         save_agreement(&env, &agreement);
 
         let token_client = token::Client::new(&env, &agreement.token);
@@ -199,6 +290,42 @@ impl StrataFlowContract {
         );
 
         publish_release(&env, agreement_id, milestone_idx, agreement.balance);
+
+        Ok(())
+    }
+
+    /// Claim refund of remaining escrow balance if provider misses deadline without completing all milestones
+    pub fn claim_timeout_refund(env: Env, agreement_id: u64) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+
+        if agreement.status != AgreementStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+
+        if env.ledger().timestamp() <= agreement.deadline {
+            return Err(Error::DeadlineNotPassed);
+        }
+
+        let refund_amount = agreement.balance;
+        if refund_amount <= 0 {
+            return Err(Error::InvalidStatus);
+        }
+
+        agreement.balance = 0;
+        agreement.status = AgreementStatus::Cancelled;
+        save_agreement(&env, &agreement);
+
+        let token_client = token::Client::new(&env, &agreement.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            &agreement.client,
+            &refund_amount,
+        );
+
+        publish_refund(&env, agreement_id, agreement.client, refund_amount);
 
         Ok(())
     }
@@ -239,7 +366,7 @@ impl StrataFlowContract {
         Ok(())
     }
 
-    /// Arbiter resolves dispute by dividing remaining balance
+    /// Arbiter resolves dispute by dividing exact remaining balance
     pub fn resolve_dispute(
         env: Env,
         agreement_id: u64,
@@ -259,7 +386,7 @@ impl StrataFlowContract {
             .checked_add(provider_amount)
             .ok_or(Error::InvalidSplit)?;
 
-        // Enforce exact remaining balance distribution to prevent trapped tokens
+        // Enforce exact distribution of remaining balance to prevent trapped tokens
         if total_payout != agreement.balance || client_amount < 0 || provider_amount < 0 {
             return Err(Error::InvalidSplit);
         }
