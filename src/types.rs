@@ -10,6 +10,7 @@ pub const PERSISTENT_LIFETIME_THRESHOLD: u32 = PERSISTENT_BUMP_AMOUNT - 30 * DAY
 pub const MAX_MILESTONES: u32 = 25;
 pub const MAX_DESC_LENGTH: u32 = 256;
 pub const MAX_PROOF_LENGTH: u32 = 128;
+pub const MAX_FEE_BPS: u32 = 1000; // Max protocol fee 10%
 
 #[contracttype]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -75,10 +76,18 @@ pub struct AgreementSummary {
 }
 
 #[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProtocolFeeConfig {
+    pub fee_bps: u32,
+    pub recipient: Address,
+}
+
+#[contracttype]
 pub enum DataKey {
     Admin,
     AgreementCounter,
     Agreement(u64),
     IsPaused,
     PendingAdmin,
+    FeeConfig,
 }
