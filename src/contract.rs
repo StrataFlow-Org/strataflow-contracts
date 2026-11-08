@@ -2,7 +2,7 @@ use crate::errors::Error;
 use crate::events::*;
 use crate::storage::*;
 use crate::types::*;
-use soroban_sdk::{contract, contractimpl, token, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, token, Address, BytesN, Env, String, Vec};
 
 #[contract]
 pub struct StrataFlowContract;
@@ -20,6 +20,35 @@ impl StrataFlowContract {
         env.storage().instance().set(&DataKey::IsPaused, &false);
         bump_instance_ttl(&env);
         Ok(())
+    }
+
+    /// Set protocol fee parameters (basis points and recipient)
+    pub fn set_fee_config(env: Env, fee_bps: u32, recipient: Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        if fee_bps > MAX_FEE_BPS {
+            return Err(Error::InvalidFeeBps);
+        }
+
+        let config = ProtocolFeeConfig {
+            fee_bps,
+            recipient: recipient.clone(),
+        };
+
+        env.storage().instance().set(&DataKey::FeeConfig, &config);
+        publish_fee_config(&env, fee_bps, recipient);
+        Ok(())
+    }
+
+    /// Query current protocol fee configuration
+    pub fn get_fee_config(env: Env) -> Option<ProtocolFeeConfig> {
+        env.storage().instance().get(&DataKey::FeeConfig)
     }
 
     /// Circuit breaker: pause or unpause contract operations
@@ -43,6 +72,26 @@ impl StrataFlowContract {
             .instance()
             .get(&DataKey::IsPaused)
             .unwrap_or(false)
+    }
+
+    /// Query protocol semver version (major, minor, patch)
+    pub fn get_contract_version(_env: Env) -> (u32, u32, u32) {
+        (1, 0, 0)
+    }
+
+    /// Upgrade contract executable code
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        env.deployer().update_current_contract_wasm(new_wasm_hash.clone());
+        publish_upgrade(&env, new_wasm_hash);
+        Ok(())
     }
 
     /// Query the protocol admin address
@@ -233,7 +282,7 @@ impl StrataFlowContract {
         Ok(())
     }
 
-    /// Client approves and releases payment for a submitted milestone (Checks-Effects-Interactions)
+    /// Client approves and releases payment for a submitted milestone (Checks-Effects-Interactions + Protocol Fee)
     pub fn release_milestone(
         env: Env,
         agreement_id: u64,
@@ -282,12 +331,35 @@ impl StrataFlowContract {
         // State committed before external token interaction
         save_agreement(&env, &agreement);
 
+        // Calculate protocol fee deduction if configured
+        let fee_config: Option<ProtocolFeeConfig> = env.storage().instance().get(&DataKey::FeeConfig);
+        let (fee_amount, provider_payout) = if let Some(ref cfg) = fee_config {
+            let fee = (release_amount * cfg.fee_bps as i128) / 10000;
+            (fee, release_amount - fee)
+        } else {
+            (0, release_amount)
+        };
+
         let token_client = token::Client::new(&env, &agreement.token);
-        token_client.transfer(
-            &env.current_contract_address(),
-            &agreement.provider,
-            &release_amount,
-        );
+
+        if provider_payout > 0 {
+            token_client.transfer(
+                &env.current_contract_address(),
+                &agreement.provider,
+                &provider_payout,
+            );
+        }
+
+        if fee_amount > 0 {
+            if let Some(ref cfg) = fee_config {
+                token_client.transfer(
+                    &env.current_contract_address(),
+                    &cfg.recipient,
+                    &fee_amount,
+                );
+                publish_fee_deducted(&env, agreement_id, milestone_idx, cfg.recipient.clone(), fee_amount);
+            }
+        }
 
         publish_release(&env, agreement_id, milestone_idx, agreement.balance);
 
@@ -416,6 +488,18 @@ impl StrataFlowContract {
         publish_resolve(&env, agreement_id, client_amount, provider_amount);
 
         Ok(())
+    }
+
+    /// Query specific milestone details
+    pub fn get_milestone(env: Env, agreement_id: u64, milestone_idx: u32) -> Result<Milestone, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        agreement.milestones.get(milestone_idx).ok_or(Error::InvalidMilestone)
+    }
+
+    /// Query total milestone count for an agreement
+    pub fn get_milestones_count(env: Env, agreement_id: u64) -> Result<u32, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.milestones.len())
     }
 
     /// Query agreement details from persistent storage
