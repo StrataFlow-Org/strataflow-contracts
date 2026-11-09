@@ -857,6 +857,23 @@ impl StrataFlowContract {
         Ok(env.ledger().timestamp() >= agreement.deadline)
     }
 
+    /// Query remaining seconds before dispute resolution timeout expires
+    pub fn get_dispute_window_remaining(env: Env, agreement_id: u64) -> Result<u64, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        if agreement.status != AgreementStatus::Disputed {
+            return Err(Error::DisputeNotActive);
+        }
+        let dispute_ts =
+            load_dispute_timestamp(&env, agreement_id).ok_or(Error::DisputeNotActive)?;
+        let expire_time = dispute_ts.saturating_add(DEFAULT_DISPUTE_WINDOW);
+        let now = env.ledger().timestamp();
+        if now >= expire_time {
+            Ok(0)
+        } else {
+            Ok(expire_time - now)
+        }
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
