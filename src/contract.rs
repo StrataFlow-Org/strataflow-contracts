@@ -808,6 +808,36 @@ impl StrataFlowContract {
             || agreement.arbiter == address)
     }
 
+    /// Check if address is client of the agreement
+    pub fn is_agreement_client(
+        env: Env,
+        agreement_id: u64,
+        address: Address,
+    ) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.client == address)
+    }
+
+    /// Check if address is provider of the agreement
+    pub fn is_agreement_provider(
+        env: Env,
+        agreement_id: u64,
+        address: Address,
+    ) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.provider == address)
+    }
+
+    /// Check if address is arbiter of the agreement
+    pub fn is_agreement_arbiter(
+        env: Env,
+        agreement_id: u64,
+        address: Address,
+    ) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.arbiter == address)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
