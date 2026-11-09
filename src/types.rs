@@ -96,3 +96,12 @@ pub enum DataKey {
     FeeConfig,
     DisputeTimestamp(u64),
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MilestonesStatusBreakdown {
+    pub pending: u32,
+    pub submitted: u32,
+    pub approved: u32,
+    pub disputed: u32,
+}
