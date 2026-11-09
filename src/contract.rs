@@ -1000,6 +1000,12 @@ impl StrataFlowContract {
         Ok(false)
     }
 
+    /// Query ledger creation timestamp for an agreement
+    pub fn get_agreement_created_at(env: Env, agreement_id: u64) -> Result<u64, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.created_at)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
