@@ -21,4 +21,5 @@ pub enum Error {
     DeadlineNotPassed = 15,
     CannotCancelFunded = 16,
     InvalidFeeBps = 17,
+    NoPendingAdmin = 18,
 }
