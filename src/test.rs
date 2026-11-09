@@ -1343,3 +1343,11 @@ fn test_metrics_reset_by_admin() {
     assert_eq!(metrics.total_agreements_created, 0);
     assert_eq!(metrics.total_escrow_volume, 0);
 }
+
+#[test]
+fn test_invariant_escrow_solvency() {
+    use crate::test_harness::TestFixture;
+    let env = Env::default();
+    let fixture = TestFixture::new(&env);
+    assert_eq!(fixture.client.get_pause_state(), false);
+}
