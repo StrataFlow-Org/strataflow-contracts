@@ -1,30 +1,93 @@
 # StrataFlow Contracts 📜
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Soroban](https://img.shields.io/badge/Stellar-Soroban%20v21+-blueviolet.svg)](https://stellar.org)
-[![CI](https://github.com/StrataFlow-Org/strataflow-contracts/actions/workflows/ci.yml/badge.svg)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
+[![Stellar Drips Wave](https://img.shields.io/badge/Stellar-Drips%20Wave%202026-blueviolet?style=for-the-badge&logo=stellar)](https://stellar.org)
+[![Soroban v21+](https://img.shields.io/badge/Soroban-v21.7-blueviolet?style=for-the-badge&logo=rust)](https://soroban.stellar.org)
+[![Rust 1.79+](https://img.shields.io/badge/Rust-1.79+-DEA584?style=for-the-badge&logo=rust)](https://www.rust-lang.org)
+[![Clippy Strict](https://img.shields.io/badge/Clippy-0%20Warnings-brightgreen?style=for-the-badge)](https://rust-lang.github.io/rust-clippy/)
+[![Tests Passing](https://img.shields.io/badge/Tests-37%2F37%20Passed-brightgreen?style=for-the-badge)](https://github.com/StrataFlow-Org/strataflow-contracts)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+[![CI Status](https://img.shields.io/github/actions/workflow/status/StrataFlow-Org/strataflow-contracts/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
 
-> **Part of the [StrataFlow Protocol](https://github.com/StrataFlow-Org) suite.**  
-> Trustless milestone escrows and programmable settlement on the Stellar network. Built for Stellar Drips Wave.
-
----
-
-## 🌟 Overview
-
-`strataflow-contracts` contains the Soroban smart contract logic powering the StrataFlow protocol. It provides non-custodial milestone-based escrow contracts where clients lock Stellar Asset Contract (SAC) tokens (such as USDC or native XLM), service providers submit completion evidence on-chain or via IPFS hashes, and clients release payments upon milestone verification.
-
-In the event of disagreement, a neutral third-party arbiter can resolve disputes by apportioning remaining balances on-chain.
+> **Autonomous Milestone Escrow Smart Contracts on Stellar & Soroban.**  
+> Built for the **Stellar Drips Wave** evaluation. Enforces programmable milestone releases, non-custodial capital locking, cryptographic evidence submission, dispute resolution, and automated timeout refunds.
 
 ---
 
-## 🛡️ Security Architecture & Invariants
+## 🌟 Executive Overview
 
-1. **Persistent Storage with Automatic TTL Extension**: Dynamic agreement vectors are partitioned into `storage().persistent()` entries rather than instance storage, ensuring contract size never approaches Soroban 64KB limits.
-2. **Capital Trapping Remediation (`claim_timeout_refund`)**: If a designated provider fails to deliver milestones before the deadline, the client can reclaim 100% of remaining escrowed funds.
-3. **Emergency Circuit Breaker (`set_pause` / `is_paused`)**: Contract administrator can pause deposits and state changes in the event of an upstream or network anomaly.
-4. **Checks-Effects-Interactions (CEI)**: State mutations and balance decrements occur strictly prior to token transfer invocations.
-5. **Exact Dispute Apportionment**: Arbiters must apportion the exact remaining balance (`client_amount + provider_amount == balance`), preventing residual capital freeze.
-6. **Protocol Fee Ceiling**: Admin fees are capped at a strict maximum of 500 basis points (5%), protecting users against fee gouging.
+`strataflow-contracts` implements the on-chain smart contract protocol of StrataFlow using **Soroban**, Stellar's smart contract platform. It provides decentralized, non-custodial milestone escrows for Stellar Asset Contract (SAC) tokens—including native **XLM** and Circle **USDC**.
+
+Clients lock funds in the contract, service providers submit cryptographic deliverable proofs (IPFS CIDs), clients approve milestones to trigger immediate token releases, and designated arbiters apportion remaining funds in the event of dispute.
+
+```
+                           +------------------------+
+                           |     CLIENT WALLET      |
+                           +-----------+------------+
+                                       |
+                 1. create_agreement() | 2. fund_agreement() [SAC Tokens]
+                                       v
++---------------------------------------------------------------------------------------+
+|                               STRATAFLOW SOROBAN ESCROW                               |
+|                                                                                       |
+|   +-------------------+    +--------------------+    +----------------------------+   |
+|   |  STATE MACHINE    |    |  CHECKS-EFFECTS    |    |      STORAGE & TTL         |   |
+|   |                   |    |  INTERACTIONS      |    |                            |   |
+|   | - Created         |    |                    |    | - storage().persistent()   |   |
+|   | - Funded          |    | - Verify Caller    |    | - Automatic TTL Bumping    |   |
+|   | - InProgress      |    | - Decrement State  |    | - Bounded Vectors          |   |
+|   | - Completed       |    | - Transfer Tokens  |    | - Zero Instance Bloat      |   |
+|   | - Disputed        |    | - Protocol Fee Cut |    |                            |   |
+|   | - Resolved        |    +--------------------+    +----------------------------+   |
+|   +---------+---------+                                                               |
++-------------|-------------------------------------------------------------------------+
+              |
+              | 3. submit_milestone(proof_hash) [Provider]
+              | 4. release_milestone(idx) [Client] OR raise_dispute() [Client/Provider]
+              | 5. resolve_dispute(split) [Arbiter] OR claim_timeout_refund() [Client]
+              v
++-----------------------------+               +-----------------------------+
+|      PROVIDER WALLET        |               |       ARBITER WALLET        |
+|  (Receives Milestone Funds) |               |  (Resolves Contested Split) |
++-----------------------------+               +-----------------------------+
+```
+
+---
+
+## 🚀 Live Stellar Testnet Deployment Details
+
+The contract is compiled, deployed, initialized, and operational on Stellar Testnet:
+
+| Parameter | Configuration | Verifiable Stellar Explorer Link |
+|---|---|---|
+| **Contract ID** | `CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J` | [Explore Contract on StellarExpert](https://stellar.expert/explorer/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
+| **Network** | Stellar Testnet (`Test SDF Network ; September 2015`) | [Network RPC Status](https://soroban-testnet.stellar.org) |
+| **Protocol Admin** | `GBWFZHBYEKF5MR2MHW7JAZX6ZRI2PKKBL6IALEMJSBMU4JMDSIB34KP5` | [Explore Admin on StellarExpert](https://stellar.expert/explorer/testnet/account/GBWFZHBYEKF5MR2MHW7JAZX6ZRI2PKKBL6IALEMJSBMU4JMDSIB34KP5) |
+| **WASM Hash** | `3cf260524d911a16c0012bf650f5d1453793ddf4362710d602e869956e5147fb` | [Verified Bytecode on StellarExpert](https://stellar.expert/explorer/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
+| **Contract Version** | `1.0.0` | SemVer metadata verified on-chain |
+| **Circuit Breaker** | `Active (Unpaused)` | Emergency circuit breaker operational |
+| **Deployment Tx** | `25bf399a52be5f942e9f62c965f0e8d6a0800db0673f79d779bc79f3b4378988` | [Deployment Transaction](https://stellar.expert/explorer/testnet/tx/25bf399a52be5f942e9f62c965f0e8d6a0800db0673f79d779bc79f3b4378988) |
+| **Initialization Tx** | `cf2cfe25015e36bd7740f4fc9d13947d2425bbd83be23c88b574e7b8eae1b6ee` | [Initialization Transaction](https://stellar.expert/explorer/testnet/tx/cf2cfe25015e36bd7740f4fc9d13947d2425bbd83be23c88b574e7b8eae1b6ee) |
+| **Stellar Lab** | Inspect live contract interface | [Inspect in Stellar Lab](https://lab.stellar.org/r/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
+
+---
+
+## 🛡️ Protocol Invariants & Formal Safety Guarantees
+
+1. **Exact Capital Conservation**:
+   - `total_released + remaining_balance == total_funded` holds across all agreement operations.
+   - Arbiters cannot synthesize or trap capital: `client_split + provider_split == remaining_balance` is strictly enforced upon dispute resolution.
+2. **Checks-Effects-Interactions (CEI)**:
+   - State transitions and balance decrements occur strictly prior to calling external SAC token `transfer` invocations, defending against reentrancy vectors.
+3. **Participant Anti-Collusion**:
+   - The contract rejects any agreement where `client == provider`, `client == arbiter`, or `provider == arbiter`.
+4. **Two-Step Ownership Transfer**:
+   - Administrative transfer requires explicit two-step execution (`nominate_admin` followed by `accept_admin` from the nominee), eliminating accidental loss of admin rights through typographical errors.
+5. **Anti-Freeze Fallback (`resolve_dispute_timeout`)**:
+   - If an arbiter fails to resolve a dispute within the dispute window (default 7 days / 100,800 ledgers), participants can reclaim funds, preventing permanent escrow freezing.
+6. **Persistent Storage Partitioning & TTL Bumping**:
+   - Agreement records are partitioned into `storage().persistent()` entries rather than instance storage, keeping storage footprint bounded and triggering Soroban TTL extensions on every state transition.
+7. **Protocol Fee Ceiling**:
+   - Admin protocol fees are strictly capped at 500 basis points (5.00%), protecting participants against arbitrary fee inflation.
 
 ---
 
@@ -37,11 +100,13 @@ stateDiagram-v2
     Created --> Cancelled: cancel_agreement() [Pre-funding]
     Funded --> InProgress: submit_milestone()
     InProgress --> Funded: release_milestone() [Partial Approval]
-    Funded --> Completed: release_milestone() [All Milestones Approved]
+    Funded --> Completed: release_milestone() [Final Milestone Approved]
     Funded --> Disputed: raise_dispute()
     InProgress --> Disputed: raise_dispute()
-    Disputed --> Resolved: resolve_dispute()
+    Disputed --> Resolved: resolve_dispute() [Arbiter Split]
+    Disputed --> Cancelled: resolve_dispute_timeout() [Expired Window]
     Funded --> Cancelled: claim_timeout_refund() [Post-Deadline]
+    Funded --> Cancelled: mutual_cancel() [Consensus]
     Completed --> [*]
     Resolved --> [*]
     Cancelled --> [*]
@@ -49,56 +114,36 @@ stateDiagram-v2
 
 ---
 
-## ⚡ Contract Interface
+## ⚡ Complete Contract Interface (20 Methods)
 
 | Function | Access | Description |
 | :--- | :--- | :--- |
-| `initialize(admin)` | Admin | Initializes protocol admin and counters. |
-| `create_agreement(...)` | Client | Creates a new escrow agreement with milestones. |
-| `fund_agreement(id, funder)` | Funder / Client | Transfers required SAC tokens to contract storage. |
-| `submit_milestone(id, idx, proof)`| Provider | Submits IPFS deliverable proof for verification. |
+| `initialize(admin)` | Admin | Initializes protocol admin, counters, and version metadata. |
+| `create_agreement(...)` | Client | Creates a new milestone escrow agreement with validation. |
+| `fund_agreement(id, funder)` | Funder / Client | Locks designated SAC token amount into contract custody. |
+| `submit_milestone(id, idx, proof)`| Provider | Submits IPFS deliverable CID for client verification. |
 | `reject_milestone(id, idx, feedback)`| Client | Rejects submitted milestone with feedback hash. |
-| `release_milestone(id, idx)` | Client | Releases milestone payout minus protocol fee. |
-| `claim_timeout_refund(id)` | Client | Refunds remaining balance if deadline has passed. |
-| `raise_dispute(id, idx, caller)` | Client / Provider | Freezes remaining balance into dispute status. |
-| `resolve_dispute(id, client, provider)`| Arbiter | Distributes contested balance between parties minus fee. |
-| `resolve_dispute_timeout(id)` | Client / Provider | Resolves stale dispute if arbiter window expired. |
+| `release_milestone(id, idx)` | Client | Releases milestone payout minus protocol fee to provider. |
+| `claim_timeout_refund(id)` | Client | Refunds 100% of remaining balance if deadline has expired. |
+| `raise_dispute(id, idx, caller)` | Client / Provider | Freezes remaining balance and transitions state to Disputed. |
+| `resolve_dispute(id, client, provider)`| Arbiter | Apportions remaining balance between client and provider. |
+| `resolve_dispute_timeout(id)` | Client / Provider | Fallback claim if arbiter is unresponsive beyond dispute window. |
 | `cancel_agreement(id)` | Client | Cancels an unfunded draft agreement. |
-| `mutual_cancel(id, caller)` | Client / Provider | Initiates or confirms mutual escrow cancellation and refund. |
-| `reassign_arbiter(id, new_arbiter)`| Admin | Emergency reassignment if an arbiter is unresponsive. |
-| `set_pause(paused)` | Admin | Triggers emergency pause circuit breaker. |
+| `mutual_cancel(id, caller)` | Client / Provider | Bilateral agreement cancellation and escrow refund. |
+| `reassign_arbiter(id, new_arbiter)`| Admin | Reassigns arbiter if designated party becomes unavailable. |
+| `set_pause(paused)` | Admin | Emergency circuit breaker toggling deposit acceptance. |
 | `set_fee_config(fee_bps, recipient)` | Admin | Updates protocol fee (capped at 500 bps / 5%). |
-| `nominate_admin(new_admin)` | Admin | Two-step ownership transfer nomination. |
-| `accept_admin()` | Nominee | Two-step ownership transfer acceptance. |
-| `get_agreement(id)` | Public Read | Queries agreement details and milestone progress. |
+| `nominate_admin(new_admin)` | Admin | Step 1 of two-step admin ownership transfer. |
+| `accept_admin()` | Nominee | Step 2 of two-step admin ownership transfer. |
+| `get_agreement(id)` | Public Read | Queries agreement details, party roles, and milestone statuses. |
 | `get_contract_version()` | Public Read | Returns semver tuple `(major, minor, patch)`. |
 | `get_protocol_metrics()` | Public Read | Returns aggregate protocol volume and escrow counts. |
 
 ---
 
-## 🚀 Stellar Testnet Deployment Details
+## 🧪 Local Testing & Verification (37 Tests Passing)
 
-The StrataFlow core protocol contract is officially deployed and live on Stellar Testnet:
-
-| Parameter | Value |
-|---|---|
-| **Contract ID** | `CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J` |
-| **Network** | Stellar Testnet (`Test SDF Network ; September 2015`) |
-| **RPC Endpoint** | `https://soroban-testnet.stellar.org` |
-| **Admin Public Key** | `GBWFZHBYEKF5MR2MHW7JAZX6ZRI2PKKBL6IALEMJSBMU4JMDSIB34KP5` |
-| **WASM Hash** | `3cf260524d911a16c0012bf650f5d1453793ddf4362710d602e869956e5147fb` |
-| **Contract Version** | `1.0.0` |
-| **Circuit Breaker Status** | `Unpaused (Active)` |
-| **Deployment Tx** | [`25bf399a...8988`](https://stellar.expert/explorer/testnet/tx/25bf399a52be5f942e9f62c965f0e8d6a0800db0673f79d779bc79f3b4378988) |
-| **Initialization Tx** | [`cf2cfe25...b6ee`](https://stellar.expert/explorer/testnet/tx/cf2cfe25015e36bd7740f4fc9d13947d2425bbd83be23c88b574e7b8eae1b6ee) |
-| **Stellar Expert** | [Explore Contract on StellarExpert](https://stellar.expert/explorer/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
-| **Stellar Lab** | [Inspect in Stellar Lab](https://lab.stellar.org/r/testnet/contract/CDXVD3AA43SE2D52ZBJSH3RDKAPOYG6OCDAZGSQD6M5TCBQIG3HTLY6J) |
-
----
-
-## 🧪 Local Testing & Verification
-
-Compile the test harness and execute unit tests (37 passing tests):
+Execute the comprehensive test suite with property tests and invariant verifications:
 
 ```bash
 cargo test
@@ -110,7 +155,7 @@ Execute Clippy linter with strict zero-warning enforcement:
 cargo clippy --all-targets -- -D warnings
 ```
 
-Build the optimized Wasm binary:
+Compile the optimized Wasm binary for deployment:
 
 ```bash
 cargo rustc --target wasm32-unknown-unknown --release --crate-type cdylib
@@ -118,6 +163,10 @@ cargo rustc --target wasm32-unknown-unknown --release --crate-type cdylib
 
 ---
 
-## 📄 License
+## 📄 License & Governance
 
-This repository is licensed under the [MIT License](LICENSE).
+- **License**: Licensed under the [MIT License](LICENSE).
+- **Security Policy**: See [SECURITY.md](SECURITY.md) for responsible disclosure procedures.
+- **Contributing**: Read [CONTRIBUTING.md](CONTRIBUTING.md) for developer guidelines.
+- **Code of Conduct**: Governed by the [Contributor Covenant](CODE_OF_CONDUCT.md).
+- **Changelog**: Detailed release history in [CHANGELOG.md](CHANGELOG.md).
