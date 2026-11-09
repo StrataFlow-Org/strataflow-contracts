@@ -54,3 +54,17 @@ pub fn remove_dispute_timestamp(env: &Env, agreement_id: u64) {
     let key = DataKey::DisputeTimestamp(agreement_id);
     env.storage().persistent().remove(&key);
 }
+
+pub fn get_milestone_rejections(env: &Env, agreement_id: u64, milestone_idx: u32) -> u32 {
+    let key = DataKey::MilestoneRejectionCount(agreement_id, milestone_idx);
+    env.storage().persistent().get(&key).unwrap_or(0u32)
+}
+
+pub fn increment_milestone_rejections(env: &Env, agreement_id: u64, milestone_idx: u32) -> u32 {
+    let key = DataKey::MilestoneRejectionCount(agreement_id, milestone_idx);
+    let count: u32 = env.storage().persistent().get(&key).unwrap_or(0u32);
+    let next_count = count.saturating_add(1);
+    env.storage().persistent().set(&key, &next_count);
+    bump_persistent_ttl(env, &key);
+    next_count
+}

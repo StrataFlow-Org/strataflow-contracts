@@ -95,6 +95,7 @@ pub enum DataKey {
     PendingAdmin,
     FeeConfig,
     DisputeTimestamp(u64),
+    MilestoneRejectionCount(u64, u32),
 }
 
 #[contracttype]
