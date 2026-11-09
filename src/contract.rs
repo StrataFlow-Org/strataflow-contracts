@@ -718,6 +718,15 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Refresh persistent storage TTL for an agreement
+    pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
+        if !has_agreement(&env, agreement_id) {
+            return Err(Error::AgreementNotFound);
+        }
+        bump_persistent_ttl(&env, &DataKey::Agreement(agreement_id));
+        Ok(())
+    }
+
     /// Query specific milestone details
     pub fn get_milestone(
         env: Env,
