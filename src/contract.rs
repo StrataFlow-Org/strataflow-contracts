@@ -511,13 +511,7 @@ impl StrataFlowContract {
         if fee_amount > 0 {
             if let Some(ref cfg) = fee_config {
                 token_client.transfer(&env.current_contract_address(), &cfg.recipient, &fee_amount);
-                publish_fee_deducted(
-                    &env,
-                    agreement_id,
-                    0,
-                    cfg.recipient.clone(),
-                    fee_amount,
-                );
+                publish_fee_deducted(&env, agreement_id, 0, cfg.recipient.clone(), fee_amount);
             }
         }
 
