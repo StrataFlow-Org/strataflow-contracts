@@ -48,6 +48,56 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Update protocol fee recipient without changing basis points
+    pub fn update_fee_recipient(env: Env, new_recipient: Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        let mut config: ProtocolFeeConfig = env
+            .storage()
+            .instance()
+            .get(&DataKey::FeeConfig)
+            .ok_or(Error::NotInitialized)?;
+
+        let old_recipient = config.recipient.clone();
+        config.recipient = new_recipient.clone();
+        env.storage().instance().set(&DataKey::FeeConfig, &config);
+        publish_fee_recipient_update(&env, old_recipient, new_recipient);
+        Ok(())
+    }
+
+    /// Update protocol fee basis points without changing recipient
+    pub fn update_fee_bps(env: Env, new_bps: u32) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        if new_bps > MAX_FEE_BPS {
+            return Err(Error::InvalidFeeBps);
+        }
+
+        let mut config: ProtocolFeeConfig = env
+            .storage()
+            .instance()
+            .get(&DataKey::FeeConfig)
+            .ok_or(Error::NotInitialized)?;
+
+        let old_bps = config.fee_bps;
+        config.fee_bps = new_bps;
+        env.storage().instance().set(&DataKey::FeeConfig, &config);
+        publish_fee_bps_update(&env, old_bps, new_bps);
+        Ok(())
+    }
+
     /// Query current protocol fee configuration
     pub fn get_fee_config(env: Env) -> Option<ProtocolFeeConfig> {
         env.storage().instance().get(&DataKey::FeeConfig)
