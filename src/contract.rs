@@ -105,6 +105,23 @@ impl StrataFlowContract {
             .ok_or(Error::NotInitialized)
     }
 
+    /// Nominate a new admin address (step 1 of 2-step transfer)
+    pub fn nominate_admin(env: Env, new_admin: Address) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, &new_admin);
+        publish_admin_nomination(&env, admin, new_admin);
+        Ok(())
+    }
+
     /// Transfer contract administrative authority
     pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         let admin: Address = env
