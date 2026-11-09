@@ -115,3 +115,12 @@ pub struct ContractMetadata {
     pub version_minor: u32,
     pub version_patch: u32,
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProtocolMetrics {
+    pub total_escrow_volume: i128,
+    pub total_agreements_created: u64,
+    pub total_agreements_completed: u64,
+    pub total_agreements_disputed: u64,
+}
