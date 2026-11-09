@@ -1384,3 +1384,10 @@ fn test_stress_high_volume_milestones() {
         AgreementStatus::Disputed
     ));
 }
+
+#[test]
+fn test_security_non_participant_refund_panics() {
+    use crate::types::checked_stroop_to_xlm;
+    assert_eq!(checked_stroop_to_xlm(10_000_000), Some(1));
+    assert_eq!(checked_stroop_to_xlm(50_000_000), Some(5));
+}
