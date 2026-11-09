@@ -967,6 +967,12 @@ impl StrataFlowContract {
         load_protocol_metrics(&env)
     }
 
+    /// Query total token balance currently held in custody by contract address
+    pub fn get_token_custody_balance(env: Env, token: Address) -> i128 {
+        let token_client = token::Client::new(&env, &token);
+        token_client.balance(&env.current_contract_address())
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
