@@ -838,6 +838,19 @@ impl StrataFlowContract {
         Ok(agreement.arbiter == address)
     }
 
+    /// Check if agreement is actively in progress (Funded or Disputed)
+    pub fn is_agreement_active(env: Env, agreement_id: u64) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.status == AgreementStatus::Funded
+            || agreement.status == AgreementStatus::Disputed)
+    }
+
+    /// Check if agreement is completed
+    pub fn is_agreement_completed(env: Env, agreement_id: u64) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.status == AgreementStatus::Completed)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
