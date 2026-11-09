@@ -469,6 +469,37 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Mutual cancellation: both client and provider agree to cancel funded agreement and refund remaining balance
+    pub fn cancel_agreement_mutual(env: Env, agreement_id: u64) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+        agreement.provider.require_auth();
+
+        if agreement.status != AgreementStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+
+        let refund_amount = agreement.balance;
+        agreement.balance = 0;
+        agreement.status = AgreementStatus::Cancelled;
+        save_agreement(&env, &agreement);
+
+        if refund_amount > 0 {
+            let token_client = token::Client::new(&env, &agreement.token);
+            token_client.transfer(
+                &env.current_contract_address(),
+                &agreement.client,
+                &refund_amount,
+            );
+        }
+
+        publish_mutual_cancel(&env, agreement_id, agreement.client, refund_amount);
+
+        Ok(())
+    }
+
     /// Claim refund of remaining escrow balance if provider misses deadline without completing all milestones
     pub fn claim_timeout_refund(env: Env, agreement_id: u64) -> Result<(), Error> {
         bump_instance_ttl(&env);
