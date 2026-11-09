@@ -690,6 +690,24 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Arbiter resolves dispute with documented cryptographic verdict hash
+    pub fn resolve_dispute_with_verdict(
+        env: Env,
+        agreement_id: u64,
+        client_amount: i128,
+        provider_amount: i128,
+        verdict_hash: String,
+    ) -> Result<(), Error> {
+        if verdict_hash.len() > MAX_PROOF_LENGTH {
+            return Err(Error::InvalidMilestone);
+        }
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        let arbiter = agreement.arbiter.clone();
+        Self::resolve_dispute(env.clone(), agreement_id, client_amount, provider_amount)?;
+        publish_dispute_verdict(&env, agreement_id, arbiter, verdict_hash);
+        Ok(())
+    }
+
     /// Arbiter resolves dispute by dividing exact remaining balance
     pub fn resolve_dispute(
         env: Env,
