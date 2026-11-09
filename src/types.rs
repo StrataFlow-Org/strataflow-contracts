@@ -146,3 +146,47 @@ pub fn is_valid_agreement_transition(from: AgreementStatus, to: AgreementStatus)
         _ => false,
     }
 }
+
+impl ContractError {
+    pub fn description(&self) -> &'static str {
+        match self {
+            ContractError::AlreadyInitialized => "Protocol is already initialized",
+            ContractError::Unauthorized => "Caller is not authorized for this action",
+            ContractError::AgreementNotFound => "Requested agreement does not exist",
+            ContractError::AgreementAlreadyFunded => "Agreement is already funded",
+            ContractError::AgreementNotActive => "Agreement is not in an active state",
+            ContractError::AgreementExpired => "Agreement deadline has passed",
+            ContractError::AgreementNotExpired => "Agreement deadline has not yet passed",
+            ContractError::InvalidMilestone => "Invalid milestone index or state",
+            ContractError::MilestoneAlreadyApproved => "Milestone has already been approved",
+            ContractError::InsufficientEscrowBalance => "Insufficient balance in escrow",
+            ContractError::DisputeAlreadyRaised => "Dispute is already open for agreement",
+            ContractError::NoActiveDispute => "No active dispute found for agreement",
+            ContractError::InvalidDisputeSplit => {
+                "Dispute resolution split amounts do not match escrow balance"
+            }
+            ContractError::ContractPaused => "Protocol contract operations are currently paused",
+            ContractError::ProtocolFeeTooHigh => "Protocol fee basis points exceed allowable limit",
+            ContractError::NoNominatedAdmin => "No nominated admin pending acceptance",
+            ContractError::NominatedAdminMismatch => {
+                "Caller does not match nominated admin address"
+            }
+            ContractError::MilestoneAlreadyCompleted => "Milestone is already completed",
+            ContractError::MilestoneNotPendingApproval => "Milestone is not pending approval",
+            ContractError::ArbiterAlreadyAssigned => "Arbiter is already assigned to this address",
+            ContractError::DisputeWindowNotPassed => "Dispute resolution window has not elapsed",
+            ContractError::AgreementAlreadyCompleted => "Agreement has already completed",
+            ContractError::MilestoneAmountBelowMinimum => {
+                "Milestone amount is below minimum threshold"
+            }
+            ContractError::AgreementDurationTooShort => {
+                "Agreement duration is shorter than minimum allowed"
+            }
+            ContractError::AgreementDurationExceeded => {
+                "Agreement duration exceeds maximum allowed limit"
+            }
+            ContractError::MilestoneDescriptionEmpty => "Milestone description cannot be empty",
+            ContractError::MilestoneIndexOutOfBounds => "Milestone index is out of bounds",
+        }
+    }
+}
