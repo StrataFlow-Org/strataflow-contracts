@@ -433,6 +433,42 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Client requests revisions by rejecting a submitted milestone with feedback hash
+    pub fn reject_milestone(
+        env: Env,
+        agreement_id: u64,
+        milestone_idx: u32,
+        feedback_hash: String,
+    ) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+
+        if agreement.status != AgreementStatus::Funded {
+            return Err(Error::InvalidStatus);
+        }
+
+        if milestone_idx >= agreement.milestones.len() || feedback_hash.len() > MAX_PROOF_LENGTH {
+            return Err(Error::InvalidMilestone);
+        }
+
+        let mut milestone = agreement.milestones.get(milestone_idx).unwrap();
+        if milestone.status != MilestoneStatus::Submitted {
+            return Err(Error::MilestoneNotSubmitted);
+        }
+
+        milestone.status = MilestoneStatus::Pending;
+        milestone.proof_hash = String::from_str(&env, "");
+        agreement.milestones.set(milestone_idx, milestone);
+
+        save_agreement(&env, &agreement);
+
+        publish_reject(&env, agreement_id, milestone_idx, feedback_hash);
+
+        Ok(())
+    }
+
     /// Claim refund of remaining escrow balance if provider misses deadline without completing all milestones
     pub fn claim_timeout_refund(env: Env, agreement_id: u64) -> Result<(), Error> {
         bump_instance_ttl(&env);
