@@ -34,3 +34,23 @@ pub fn has_agreement(env: &Env, id: u64) -> bool {
     let key = DataKey::Agreement(id);
     env.storage().persistent().has(&key)
 }
+
+pub fn set_dispute_timestamp(env: &Env, agreement_id: u64, timestamp: u64) {
+    let key = DataKey::DisputeTimestamp(agreement_id);
+    env.storage().persistent().set(&key, &timestamp);
+    bump_persistent_ttl(env, &key);
+}
+
+pub fn load_dispute_timestamp(env: &Env, agreement_id: u64) -> Option<u64> {
+    let key = DataKey::DisputeTimestamp(agreement_id);
+    let ts: Option<u64> = env.storage().persistent().get(&key);
+    if ts.is_some() {
+        bump_persistent_ttl(env, &key);
+    }
+    ts
+}
+
+pub fn remove_dispute_timestamp(env: &Env, agreement_id: u64) {
+    let key = DataKey::DisputeTimestamp(agreement_id);
+    env.storage().persistent().remove(&key);
+}

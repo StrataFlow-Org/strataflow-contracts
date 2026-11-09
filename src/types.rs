@@ -90,4 +90,5 @@ pub enum DataKey {
     IsPaused,
     PendingAdmin,
     FeeConfig,
+    DisputeTimestamp(u64),
 }
