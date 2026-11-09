@@ -1326,3 +1326,20 @@ fn test_pending_milestone_queries() {
     let created_at = client.get_agreement_created_at(&agreement_id);
     assert_eq!(created_at, env.ledger().timestamp());
 }
+
+#[test]
+fn test_metrics_reset_by_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    client.initialize(&admin);
+
+    client.reset_protocol_metrics();
+    let metrics = client.get_protocol_metrics();
+    assert_eq!(metrics.total_agreements_created, 0);
+    assert_eq!(metrics.total_escrow_volume, 0);
+}
