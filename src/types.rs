@@ -11,6 +11,7 @@ pub const MAX_MILESTONES: u32 = 25;
 pub const MAX_DESC_LENGTH: u32 = 256;
 pub const MAX_PROOF_LENGTH: u32 = 128;
 pub const MAX_FEE_BPS: u32 = 1000; // Max protocol fee 10%
+pub const MIN_MILESTONE_AMOUNT: i128 = 1; // Strict floor > 0
 pub const DEFAULT_DISPUTE_WINDOW: u64 = 30 * 86400; // 30-day arbitration resolution window
 
 #[contracttype]

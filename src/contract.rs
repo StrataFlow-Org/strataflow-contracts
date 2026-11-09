@@ -210,7 +210,7 @@ impl StrataFlowContract {
         let mut total_amount: i128 = 0;
         for i in 0..milestones.len() {
             let m = milestones.get(i).unwrap();
-            if m.amount <= 0 || m.description.len() > MAX_DESC_LENGTH {
+            if m.amount < MIN_MILESTONE_AMOUNT || m.description.len() > MAX_DESC_LENGTH {
                 return Err(Error::InvalidMilestone);
             }
             total_amount = total_amount

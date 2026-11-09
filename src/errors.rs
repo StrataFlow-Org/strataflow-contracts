@@ -23,6 +23,7 @@ pub enum Error {
     InvalidFeeBps = 17,
     NoPendingAdmin = 18,
     DisputeTimeoutNotPassed = 19,
+    InvalidAmount = 20,
     MilestoneNotSubmitted = 21,
     SameArbiter = 23,
 }
