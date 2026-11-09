@@ -1275,3 +1275,54 @@ fn test_dispute_resolution_with_verdict() {
     assert_eq!(token_client.balance(&client_addr), 500);
     assert_eq!(token_client.balance(&provider_addr), 500);
 }
+
+#[test]
+fn test_pending_milestone_queries() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &2000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Part 1"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let m2 = Milestone {
+        description: String::from_str(&env, "Part 2"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1, m2];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    assert_eq!(client.get_pending_milestone_idx(&agreement_id), Some(0));
+    assert!(client.has_pending_milestones(&agreement_id));
+
+    let created_at = client.get_agreement_created_at(&agreement_id);
+    assert_eq!(created_at, env.ledger().timestamp());
+}
