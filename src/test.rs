@@ -1162,3 +1162,64 @@ fn test_duration_too_short_panics() {
         &deadline,
     );
 }
+
+#[test]
+fn test_protocol_metrics_tracking() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &5000);
+    client.initialize(&admin);
+
+    let init_metrics = client.get_protocol_metrics();
+    assert_eq!(init_metrics.total_agreements_created, 0);
+    assert_eq!(init_metrics.total_escrow_volume, 0);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Scope"),
+        amount: 3000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    let metrics_after_create = client.get_protocol_metrics();
+    assert_eq!(metrics_after_create.total_agreements_created, 1);
+
+    client.fund_agreement(&agreement_id, &client_addr);
+    let metrics_after_fund = client.get_protocol_metrics();
+    assert_eq!(metrics_after_fund.total_escrow_volume, 3000);
+
+    // Verify custody balance
+    let custody_bal = client.get_token_custody_balance(&token_contract.address());
+    assert_eq!(custody_bal, 3000);
+
+    // Complete agreement
+    client.submit_milestone(&agreement_id, &0, &String::from_str(&env, "ipfs://proof"));
+    client.release_milestone(&agreement_id, &0);
+
+    let final_metrics = client.get_protocol_metrics();
+    assert_eq!(final_metrics.total_agreements_completed, 1);
+}
