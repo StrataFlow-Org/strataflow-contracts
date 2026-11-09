@@ -727,6 +727,15 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Query all milestones for an agreement directly
+    pub fn get_agreement_milestones(
+        env: Env,
+        agreement_id: u64,
+    ) -> Result<Vec<Milestone>, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.milestones)
+    }
+
     /// Query specific milestone details
     pub fn get_milestone(
         env: Env,
