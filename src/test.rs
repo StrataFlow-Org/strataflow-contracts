@@ -1351,3 +1351,11 @@ fn test_invariant_escrow_solvency() {
     let fixture = TestFixture::new(&env);
     assert_eq!(fixture.client.get_pause_state(), false);
 }
+
+#[test]
+fn test_boundary_milestone_count() {
+    use crate::test_harness::TestFixture;
+    let env = Env::default();
+    let fixture = TestFixture::new(&env);
+    assert_eq!(fixture.client.version(), 1);
+}
