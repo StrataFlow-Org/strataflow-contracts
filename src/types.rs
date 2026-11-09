@@ -135,16 +135,16 @@ pub fn checked_xlm_to_stroop(xlm: i128) -> Option<i128> {
 }
 
 pub fn is_valid_agreement_transition(from: AgreementStatus, to: AgreementStatus) -> bool {
-    match (from, to) {
-        (AgreementStatus::Created, AgreementStatus::Funded) => true,
-        (AgreementStatus::Created, AgreementStatus::Cancelled) => true,
-        (AgreementStatus::Funded, AgreementStatus::Completed) => true,
-        (AgreementStatus::Funded, AgreementStatus::Disputed) => true,
-        (AgreementStatus::Funded, AgreementStatus::Cancelled) => true,
-        (AgreementStatus::Disputed, AgreementStatus::Resolved) => true,
-        (AgreementStatus::Disputed, AgreementStatus::Completed) => true,
-        _ => false,
-    }
+    matches!(
+        (from, to),
+        (AgreementStatus::Created, AgreementStatus::Funded)
+            | (AgreementStatus::Created, AgreementStatus::Cancelled)
+            | (AgreementStatus::Funded, AgreementStatus::Completed)
+            | (AgreementStatus::Funded, AgreementStatus::Disputed)
+            | (AgreementStatus::Funded, AgreementStatus::Cancelled)
+            | (AgreementStatus::Disputed, AgreementStatus::Resolved)
+            | (AgreementStatus::Disputed, AgreementStatus::Completed)
+    )
 }
 
 impl crate::errors::Error {

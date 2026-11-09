@@ -57,15 +57,22 @@ stateDiagram-v2
 | `create_agreement(...)` | Client | Creates a new escrow agreement with milestones. |
 | `fund_agreement(id, funder)` | Funder / Client | Transfers required SAC tokens to contract storage. |
 | `submit_milestone(id, idx, proof)`| Provider | Submits IPFS deliverable proof for verification. |
+| `reject_milestone(id, idx, feedback)`| Client | Rejects submitted milestone with feedback hash. |
 | `release_milestone(id, idx)` | Client | Releases milestone payout minus protocol fee. |
 | `claim_timeout_refund(id)` | Client | Refunds remaining balance if deadline has passed. |
 | `raise_dispute(id, idx, caller)` | Client / Provider | Freezes remaining balance into dispute status. |
-| `resolve_dispute(id, client, provider)`| Arbiter | Distributes contested balance between parties. |
+| `resolve_dispute(id, client, provider)`| Arbiter | Distributes contested balance between parties minus fee. |
+| `resolve_dispute_timeout(id)` | Client / Provider | Resolves stale dispute if arbiter window expired. |
 | `cancel_agreement(id)` | Client | Cancels an unfunded draft agreement. |
+| `mutual_cancel(id, caller)` | Client / Provider | Initiates or confirms mutual escrow cancellation and refund. |
+| `reassign_arbiter(id, new_arbiter)`| Admin | Emergency reassignment if an arbiter is unresponsive. |
 | `set_pause(paused)` | Admin | Triggers emergency pause circuit breaker. |
 | `set_fee_config(fee_bps, recipient)` | Admin | Updates protocol fee (capped at 500 bps / 5%). |
+| `nominate_admin(new_admin)` | Admin | Two-step ownership transfer nomination. |
+| `accept_admin()` | Nominee | Two-step ownership transfer acceptance. |
 | `get_agreement(id)` | Public Read | Queries agreement details and milestone progress. |
 | `get_contract_version()` | Public Read | Returns semver tuple `(major, minor, patch)`. |
+| `get_protocol_metrics()` | Public Read | Returns aggregate protocol volume and escrow counts. |
 
 ---
 
@@ -89,18 +96,18 @@ The StrataFlow core protocol contract is officially deployed and live on Stellar
 
 ---
 
-## 🧪 Local Testing
+## 🧪 Local Testing & Verification
 
-Compile the test harness and execute unit tests:
+Compile the test harness and execute unit tests (37 passing tests):
 
 ```bash
 cargo test
 ```
 
-Execute Clippy linter:
+Execute Clippy linter with strict zero-warning enforcement:
 
 ```bash
-cargo clippy --all-targets -- -A dead_code
+cargo clippy --all-targets -- -D warnings
 ```
 
 Build the optimized Wasm binary:

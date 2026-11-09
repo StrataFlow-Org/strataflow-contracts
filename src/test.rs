@@ -1349,7 +1349,7 @@ fn test_invariant_escrow_solvency() {
     use crate::test_harness::TestFixture;
     let env = Env::default();
     let fixture = TestFixture::new(&env);
-    assert_eq!(fixture.client.is_paused(), false);
+    assert!(!fixture.client.is_paused());
 }
 
 #[test]
@@ -1365,7 +1365,7 @@ fn test_boundary_min_duration() {
     use crate::test_harness::TestFixture;
     let env = Env::default();
     let fixture = TestFixture::new(&env);
-    assert_eq!(fixture.client.is_admin(&fixture.admin), true);
+    assert!(fixture.client.is_admin(&fixture.admin));
 }
 
 #[test]
