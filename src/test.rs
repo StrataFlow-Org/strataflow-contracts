@@ -1223,3 +1223,55 @@ fn test_protocol_metrics_tracking() {
     let final_metrics = client.get_protocol_metrics();
     assert_eq!(final_metrics.total_agreements_completed, 1);
 }
+
+#[test]
+fn test_dispute_resolution_with_verdict() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_client = TokenClient::new(&env, &token_contract.address());
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Disputed milestone"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&agreement_id, &client_addr);
+    client.raise_dispute(&agreement_id, &0, &client_addr);
+
+    let metrics_disp = client.get_protocol_metrics();
+    assert_eq!(metrics_disp.total_agreements_disputed, 1);
+
+    let verdict = String::from_str(&env, "ipfs://QmArbitrationCourtRulingEvidenceAndVerdict");
+    client.resolve_dispute_with_verdict(&agreement_id, &500, &500, &verdict);
+
+    assert_eq!(token_client.balance(&client_addr), 500);
+    assert_eq!(token_client.balance(&provider_addr), 500);
+}
