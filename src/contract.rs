@@ -1006,6 +1006,26 @@ impl StrataFlowContract {
         Ok(agreement.created_at)
     }
 
+    /// Reset protocol operational metrics (admin only)
+    pub fn reset_protocol_metrics(env: Env) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        bump_instance_ttl(&env);
+
+        let reset = ProtocolMetrics {
+            total_escrow_volume: 0,
+            total_agreements_created: 0,
+            total_agreements_completed: 0,
+            total_agreements_disputed: 0,
+        };
+        save_protocol_metrics(&env, &reset);
+        Ok(())
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
