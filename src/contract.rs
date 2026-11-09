@@ -973,6 +973,17 @@ impl StrataFlowContract {
         token_client.balance(&env.current_contract_address())
     }
 
+    /// Find the index of the first pending milestone, if any
+    pub fn get_pending_milestone_idx(env: Env, agreement_id: u64) -> Result<Option<u32>, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        for i in 0..agreement.milestones.len() {
+            if agreement.milestones.get(i).unwrap().status == MilestoneStatus::Pending {
+                return Ok(Some(i));
+            }
+        }
+        Ok(None)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
