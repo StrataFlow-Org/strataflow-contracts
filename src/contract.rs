@@ -209,7 +209,11 @@ impl StrataFlowContract {
             return Err(Error::DeadlinePassed);
         }
 
-        if deadline.saturating_sub(env.ledger().timestamp()) > MAX_AGREEMENT_DURATION {
+        let duration = deadline.saturating_sub(env.ledger().timestamp());
+        if duration < MIN_AGREEMENT_DURATION {
+            return Err(Error::AgreementDurationTooShort);
+        }
+        if duration > MAX_AGREEMENT_DURATION {
             return Err(Error::DurationExceeded);
         }
 
