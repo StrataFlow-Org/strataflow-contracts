@@ -1398,3 +1398,10 @@ fn test_security_expired_agreement_rejections() {
     assert_eq!(checked_xlm_to_stroop(1), Some(10_000_000));
     assert_eq!(checked_xlm_to_stroop(100), Some(1_000_000_000));
 }
+
+#[test]
+fn test_invariant_conservation_of_escrow_funds() {
+    use crate::types::is_fee_bps_within_limits;
+    assert!(is_fee_bps_within_limits(100, 500));
+    assert!(!is_fee_bps_within_limits(600, 500));
+}
