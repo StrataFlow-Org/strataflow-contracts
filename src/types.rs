@@ -133,3 +133,16 @@ pub fn checked_stroop_to_xlm(stroops: i128) -> Option<i128> {
 pub fn checked_xlm_to_stroop(xlm: i128) -> Option<i128> {
     xlm.checked_mul(10_000_000)
 }
+
+pub fn is_valid_agreement_transition(from: AgreementStatus, to: AgreementStatus) -> bool {
+    match (from, to) {
+        (AgreementStatus::Created, AgreementStatus::Funded) => true,
+        (AgreementStatus::Created, AgreementStatus::Cancelled) => true,
+        (AgreementStatus::Funded, AgreementStatus::Completed) => true,
+        (AgreementStatus::Funded, AgreementStatus::Disputed) => true,
+        (AgreementStatus::Funded, AgreementStatus::Cancelled) => true,
+        (AgreementStatus::Disputed, AgreementStatus::Resolved) => true,
+        (AgreementStatus::Disputed, AgreementStatus::Completed) => true,
+        _ => false,
+    }
+}
