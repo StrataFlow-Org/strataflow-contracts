@@ -317,6 +317,10 @@ impl StrataFlowContract {
             .instance()
             .set(&DataKey::AgreementCounter, &counter);
 
+        let mut metrics = load_protocol_metrics(&env);
+        metrics.total_agreements_created = metrics.total_agreements_created.saturating_add(1);
+        save_protocol_metrics(&env, &metrics);
+
         publish_create(&env, counter, client, provider, total_amount);
 
         Ok(counter)
