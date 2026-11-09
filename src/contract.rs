@@ -984,6 +984,18 @@ impl StrataFlowContract {
         Ok(None)
     }
 
+    /// Check whether agreement has any incomplete/pending milestones
+    pub fn has_pending_milestones(env: Env, agreement_id: u64) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        for i in 0..agreement.milestones.len() {
+            let status = agreement.milestones.get(i).unwrap().status;
+            if status == MilestoneStatus::Pending || status == MilestoneStatus::Submitted {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
