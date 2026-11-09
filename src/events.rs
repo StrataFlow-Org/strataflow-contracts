@@ -79,6 +79,13 @@ pub fn publish_reject(env: &Env, agreement_id: u64, milestone_idx: u32, feedback
     );
 }
 
+pub fn publish_mutual_cancel(env: &Env, agreement_id: u64, client: Address, refund_amount: i128) {
+    env.events().publish(
+        (symbol_short!("mut_can"), agreement_id),
+        (client, refund_amount),
+    );
+}
+
 pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
     env.events()
         .publish((symbol_short!("fee_cfg"),), (fee_bps, recipient));
