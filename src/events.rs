@@ -67,6 +67,11 @@ pub fn publish_admin_transfer(env: &Env, old_admin: Address, new_admin: Address)
         .publish((symbol_short!("admin"),), (old_admin, new_admin));
 }
 
+pub fn publish_admin_nomination(env: &Env, current_admin: Address, pending_admin: Address) {
+    env.events()
+        .publish((symbol_short!("nom_adm"),), (current_admin, pending_admin));
+}
+
 pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
     env.events()
         .publish((symbol_short!("fee_cfg"),), (fee_bps, recipient));
