@@ -96,6 +96,7 @@ pub enum DataKey {
     FeeConfig,
     DisputeTimestamp(u64),
     MilestoneRejectionCount(u64, u32),
+    ProtocolMetrics,
 }
 
 #[contracttype]

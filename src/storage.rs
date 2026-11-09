@@ -68,3 +68,22 @@ pub fn increment_milestone_rejections(env: &Env, agreement_id: u64, milestone_id
     bump_persistent_ttl(env, &key);
     next_count
 }
+
+pub fn load_protocol_metrics(env: &Env) -> ProtocolMetrics {
+    env.storage()
+        .instance()
+        .get(&DataKey::ProtocolMetrics)
+        .unwrap_or(ProtocolMetrics {
+            total_escrow_volume: 0,
+            total_agreements_created: 0,
+            total_agreements_completed: 0,
+            total_agreements_disputed: 0,
+        })
+}
+
+pub fn save_protocol_metrics(env: &Env, metrics: &ProtocolMetrics) {
+    env.storage()
+        .instance()
+        .set(&DataKey::ProtocolMetrics, metrics);
+    bump_instance_ttl(env);
+}
