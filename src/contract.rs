@@ -135,6 +135,10 @@ impl StrataFlowContract {
             return Err(Error::ProtocolPaused);
         }
 
+        if client == provider || client == arbiter || provider == arbiter {
+            return Err(Error::Unauthorized);
+        }
+
         client.require_auth();
         bump_instance_ttl(&env);
 
@@ -477,6 +481,15 @@ impl StrataFlowContract {
         agreement.status = AgreementStatus::Resolved;
         save_agreement(&env, &agreement);
 
+        let fee_config: Option<ProtocolFeeConfig> =
+            env.storage().instance().get(&DataKey::FeeConfig);
+        let (fee_amount, provider_payout) = if let Some(ref cfg) = fee_config {
+            let fee = (provider_amount * cfg.fee_bps as i128) / 10000;
+            (fee, provider_amount - fee)
+        } else {
+            (0, provider_amount)
+        };
+
         let token_client = token::Client::new(&env, &agreement.token);
 
         if client_amount > 0 {
@@ -487,12 +500,25 @@ impl StrataFlowContract {
             );
         }
 
-        if provider_amount > 0 {
+        if provider_payout > 0 {
             token_client.transfer(
                 &env.current_contract_address(),
                 &agreement.provider,
-                &provider_amount,
+                &provider_payout,
             );
+        }
+
+        if fee_amount > 0 {
+            if let Some(ref cfg) = fee_config {
+                token_client.transfer(&env.current_contract_address(), &cfg.recipient, &fee_amount);
+                publish_fee_deducted(
+                    &env,
+                    agreement_id,
+                    0,
+                    cfg.recipient.clone(),
+                    fee_amount,
+                );
+            }
         }
 
         publish_resolve(&env, agreement_id, client_amount, provider_amount);

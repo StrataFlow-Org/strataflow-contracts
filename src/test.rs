@@ -557,3 +557,58 @@ fn test_emergency_pause_rejects_deposits() {
     // Attempting to fund paused agreement must panic with EmergencyPaused
     client.fund_agreement(&id, &client_addr);
 }
+
+#[test]
+fn test_dispute_resolution_deducts_fee() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+    let fee_recipient = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_client = TokenClient::new(&env, &token_contract.address());
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    // Set 2.5% protocol fee (250 bps)
+    client.set_fee_config(&250, &fee_recipient);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Full delivery"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&agreement_id, &client_addr);
+    client.raise_dispute(&agreement_id, &0, &client_addr);
+
+    // Arbiter splits 400 to client, 600 to provider
+    client.resolve_dispute(&agreement_id, &400, &600);
+
+    // 2.5% fee on provider payout of 600 = 15 fee, 585 to provider
+    assert_eq!(token_client.balance(&fee_recipient), 15);
+    assert_eq!(token_client.balance(&provider_addr), 585);
+    assert_eq!(token_client.balance(&client_addr), 400);
+}
