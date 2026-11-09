@@ -7,8 +7,10 @@
 [![Tests Passing](https://img.shields.io/badge/Tests-37%2F37%20Passed-brightgreen?style=for-the-badge)](https://github.com/StrataFlow-Org/strataflow-contracts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![CI Status](https://img.shields.io/github/actions/workflow/status/StrataFlow-Org/strataflow-contracts/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
+[![Live Frontend DApp](https://img.shields.io/badge/Frontend-strataflow--web.vercel.app-black?style=for-the-badge&logo=vercel)](https://strataflow-web.vercel.app)
 
 > **Autonomous Milestone Escrow Smart Contracts on Stellar & Soroban.**  
+> 🌐 **Live Web Application:** [https://strataflow-web.vercel.app](https://strataflow-web.vercel.app)  
 > Enforces programmable milestone releases, non-custodial capital locking, cryptographic evidence submission, dispute resolution, and automated timeout refunds.
 
 ---
