@@ -103,6 +103,16 @@ pub fn publish_dispute_timeout(env: &Env, agreement_id: u64, refund_amount: i128
         .publish((symbol_short!("disp_to"), agreement_id), refund_amount);
 }
 
+pub fn publish_fee_recipient_update(env: &Env, old_recipient: Address, new_recipient: Address) {
+    env.events()
+        .publish((symbol_short!("fee_rec"),), (old_recipient, new_recipient));
+}
+
+pub fn publish_fee_bps_update(env: &Env, old_bps: u32, new_bps: u32) {
+    env.events()
+        .publish((symbol_short!("fee_bps"),), (old_bps, new_bps));
+}
+
 pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
     env.events()
         .publish((symbol_short!("fee_cfg"),), (fee_bps, recipient));
