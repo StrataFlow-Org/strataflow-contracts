@@ -122,6 +122,28 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Accept pending admin nomination (step 2 of 2-step transfer)
+    pub fn accept_admin(env: Env) -> Result<(), Error> {
+        let pending_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingAdmin)
+            .ok_or(Error::NoPendingAdmin)?;
+        pending_admin.require_auth();
+        bump_instance_ttl(&env);
+
+        let old_admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+
+        env.storage().instance().set(&DataKey::Admin, &pending_admin);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+        publish_admin_transfer(&env, old_admin, pending_admin);
+        Ok(())
+    }
+
     /// Transfer contract administrative authority
     pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         let admin: Address = env
