@@ -125,3 +125,11 @@ pub struct ProtocolMetrics {
     pub total_agreements_completed: u64,
     pub total_agreements_disputed: u64,
 }
+
+pub fn checked_stroop_to_xlm(stroops: i128) -> Option<i128> {
+    stroops.checked_div(10_000_000)
+}
+
+pub fn checked_xlm_to_stroop(xlm: i128) -> Option<i128> {
+    xlm.checked_mul(10_000_000)
+}
