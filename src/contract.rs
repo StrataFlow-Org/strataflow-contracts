@@ -144,6 +144,20 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Query pending admin address if nomination is active
+    pub fn get_pending_admin(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAdmin)
+    }
+
+    /// Verify whether an address is the current admin
+    pub fn is_admin(env: Env, address: Address) -> bool {
+        env.storage()
+            .instance()
+            .get::<_, Address>(&DataKey::Admin)
+            .map(|a| a == address)
+            .unwrap_or(false)
+    }
+
     /// Transfer contract administrative authority
     pub fn transfer_admin(env: Env, new_admin: Address) -> Result<(), Error> {
         let admin: Address = env
