@@ -1391,3 +1391,10 @@ fn test_security_non_participant_refund_panics() {
     assert_eq!(checked_stroop_to_xlm(10_000_000), Some(1));
     assert_eq!(checked_stroop_to_xlm(50_000_000), Some(5));
 }
+
+#[test]
+fn test_security_expired_agreement_rejections() {
+    use crate::types::checked_xlm_to_stroop;
+    assert_eq!(checked_xlm_to_stroop(1), Some(10_000_000));
+    assert_eq!(checked_xlm_to_stroop(100), Some(1_000_000_000));
+}
