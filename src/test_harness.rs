@@ -43,3 +43,31 @@ pub fn create_mock_token<'a>(
     let token_admin = soroban_sdk::token::StellarAssetClient::new(env, &token_address);
     (token_address, token_client, token_admin)
 }
+
+pub struct AgreementFixtureBuilder<'a> {
+    pub fixture: &'a TestFixture<'a>,
+    pub client_addr: Address,
+    pub provider_addr: Address,
+    pub arbiter_addr: Address,
+    pub token_addr: Address,
+    pub duration_seconds: u64,
+}
+
+impl<'a> AgreementFixtureBuilder<'a> {
+    pub fn new(fixture: &'a TestFixture<'a>, token_addr: Address) -> Self {
+        let env = &fixture.env;
+        Self {
+            fixture,
+            client_addr: Address::generate(env),
+            provider_addr: Address::generate(env),
+            arbiter_addr: Address::generate(env),
+            token_addr,
+            duration_seconds: 7200,
+        }
+    }
+
+    pub fn with_duration(mut self, duration: u64) -> Self {
+        self.duration_seconds = duration;
+        self
+    }
+}
