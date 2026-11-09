@@ -1,4 +1,11 @@
-fn assert_milestone_sum_matches_total(milestones: &Vec<MilestoneInput>, total_amount: i128) {
+use crate::errors::Error;
+use crate::events::*;
+use crate::storage::*;
+use crate::types::*;
+use soroban_sdk::{contract, contractimpl, token, Address, BytesN, Env, String, Vec};
+
+#[allow(dead_code)]
+fn assert_milestone_sum_matches_total(milestones: &Vec<Milestone>, total_amount: i128) {
     let mut sum: i128 = 0;
     for m in milestones.iter() {
         sum = sum.checked_add(m.amount).expect("Milestone sum overflow");
@@ -8,17 +15,12 @@ fn assert_milestone_sum_matches_total(milestones: &Vec<MilestoneInput>, total_am
     }
 }
 
+#[allow(dead_code)]
 fn assert_non_negative_balance(balance: i128) {
     if balance < 0 {
         panic!("Protocol invariant violated: negative agreement escrow balance");
     }
 }
-
-use crate::errors::Error;
-use crate::events::*;
-use crate::storage::*;
-use crate::types::*;
-use soroban_sdk::{contract, contractimpl, token, Address, BytesN, Env, String, Vec};
 
 #[contract]
 pub struct StrataFlowContract;

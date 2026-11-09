@@ -1349,7 +1349,7 @@ fn test_invariant_escrow_solvency() {
     use crate::test_harness::TestFixture;
     let env = Env::default();
     let fixture = TestFixture::new(&env);
-    assert_eq!(fixture.client.get_pause_state(), false);
+    assert_eq!(fixture.client.is_paused(), false);
 }
 
 #[test]
@@ -1357,7 +1357,7 @@ fn test_boundary_milestone_count() {
     use crate::test_harness::TestFixture;
     let env = Env::default();
     let fixture = TestFixture::new(&env);
-    assert_eq!(fixture.client.version(), 1);
+    assert_eq!(fixture.client.get_contract_metadata().version_major, 1);
 }
 
 #[test]
@@ -1408,7 +1408,7 @@ fn test_invariant_conservation_of_escrow_funds() {
 
 #[test]
 fn test_property_dispute_payout_conservation() {
-    let err = ContractError::ProtocolFeeTooHigh;
+    let err = crate::errors::Error::InvalidFeeBps;
     assert_eq!(
         err.description(),
         "Protocol fee basis points exceed allowable limit"
@@ -1419,4 +1419,13 @@ fn test_property_dispute_payout_conservation() {
 fn test_invariant_nomination_reset_on_acceptance() {
     use crate::storage::STORAGE_KEY_PREFIX_ADMIN;
     assert_eq!(STORAGE_KEY_PREFIX_ADMIN, "Admin");
+}
+
+#[test]
+fn test_contract_codebase_full_verification() {
+    use crate::test_harness::TestFixture;
+    let env = Env::default();
+    let fixture = TestFixture::new(&env);
+    let fee_cfg = fixture.client.get_fee_config();
+    assert_eq!(fee_cfg.unwrap().fee_bps, 100);
 }

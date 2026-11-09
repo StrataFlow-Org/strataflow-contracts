@@ -147,46 +147,51 @@ pub fn is_valid_agreement_transition(from: AgreementStatus, to: AgreementStatus)
     }
 }
 
-impl ContractError {
+impl crate::errors::Error {
     pub fn description(&self) -> &'static str {
         match self {
-            ContractError::AlreadyInitialized => "Protocol is already initialized",
-            ContractError::Unauthorized => "Caller is not authorized for this action",
-            ContractError::AgreementNotFound => "Requested agreement does not exist",
-            ContractError::AgreementAlreadyFunded => "Agreement is already funded",
-            ContractError::AgreementNotActive => "Agreement is not in an active state",
-            ContractError::AgreementExpired => "Agreement deadline has passed",
-            ContractError::AgreementNotExpired => "Agreement deadline has not yet passed",
-            ContractError::InvalidMilestone => "Invalid milestone index or state",
-            ContractError::MilestoneAlreadyApproved => "Milestone has already been approved",
-            ContractError::InsufficientEscrowBalance => "Insufficient balance in escrow",
-            ContractError::DisputeAlreadyRaised => "Dispute is already open for agreement",
-            ContractError::NoActiveDispute => "No active dispute found for agreement",
-            ContractError::InvalidDisputeSplit => {
+            crate::errors::Error::AlreadyInitialized => "Protocol is already initialized",
+            crate::errors::Error::NotInitialized => "Protocol is not initialized",
+            crate::errors::Error::Unauthorized => "Caller is not authorized for this action",
+            crate::errors::Error::AgreementNotFound => "Requested agreement does not exist",
+            crate::errors::Error::InvalidMilestone => "Invalid milestone index or state",
+            crate::errors::Error::InvalidStatus => "Agreement status is not valid for this action",
+            crate::errors::Error::MilestoneNotCompleted => "Milestone has not been approved",
+            crate::errors::Error::DisputeAlreadyActive => "Dispute is already open for agreement",
+            crate::errors::Error::DisputeNotActive => "No active dispute found for agreement",
+            crate::errors::Error::DeadlinePassed => "Agreement deadline has passed",
+            crate::errors::Error::InvalidSplit => {
                 "Dispute resolution split amounts do not match escrow balance"
             }
-            ContractError::ContractPaused => "Protocol contract operations are currently paused",
-            ContractError::ProtocolFeeTooHigh => "Protocol fee basis points exceed allowable limit",
-            ContractError::NoNominatedAdmin => "No nominated admin pending acceptance",
-            ContractError::NominatedAdminMismatch => {
-                "Caller does not match nominated admin address"
+            crate::errors::Error::MilestoneLimitExceeded => {
+                "Milestone count exceeds maximum allowed"
             }
-            ContractError::MilestoneAlreadyCompleted => "Milestone is already completed",
-            ContractError::MilestoneNotPendingApproval => "Milestone is not pending approval",
-            ContractError::ArbiterAlreadyAssigned => "Arbiter is already assigned to this address",
-            ContractError::DisputeWindowNotPassed => "Dispute resolution window has not elapsed",
-            ContractError::AgreementAlreadyCompleted => "Agreement has already completed",
-            ContractError::MilestoneAmountBelowMinimum => {
-                "Milestone amount is below minimum threshold"
+            crate::errors::Error::ProtocolPaused => {
+                "Protocol contract operations are currently paused"
             }
-            ContractError::AgreementDurationTooShort => {
-                "Agreement duration is shorter than minimum allowed"
+            crate::errors::Error::MilestoneOutOfOrder => {
+                "Milestones must be completed sequentially"
             }
-            ContractError::AgreementDurationExceeded => {
+            crate::errors::Error::DeadlineNotPassed => "Agreement deadline has not yet passed",
+            crate::errors::Error::CannotCancelFunded => {
+                "Cannot cancel funded agreement without mutual approval"
+            }
+            crate::errors::Error::InvalidFeeBps => {
+                "Protocol fee basis points exceed allowable limit"
+            }
+            crate::errors::Error::NoPendingAdmin => "No nominated admin pending acceptance",
+            crate::errors::Error::DisputeTimeoutNotPassed => {
+                "Dispute resolution window has not elapsed"
+            }
+            crate::errors::Error::InvalidAmount => "Milestone amount is invalid or below minimum",
+            crate::errors::Error::MilestoneNotSubmitted => "Milestone proof has not been submitted",
+            crate::errors::Error::DurationExceeded => {
                 "Agreement duration exceeds maximum allowed limit"
             }
-            ContractError::MilestoneDescriptionEmpty => "Milestone description cannot be empty",
-            ContractError::MilestoneIndexOutOfBounds => "Milestone index is out of bounds",
+            crate::errors::Error::SameArbiter => "Arbiter is already assigned to this address",
+            crate::errors::Error::AgreementDurationTooShort => {
+                "Agreement duration is shorter than minimum allowed"
+            }
         }
     }
 }

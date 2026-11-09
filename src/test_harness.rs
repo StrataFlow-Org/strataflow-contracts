@@ -1,7 +1,6 @@
 #![cfg(test)]
 use crate::contract::{StrataFlowContract, StrataFlowContractClient};
-use crate::types::MilestoneInput;
-use soroban_sdk::{testutils::Address as _, Address, Env, String, Vec};
+use soroban_sdk::{testutils::Address as _, Address, Env};
 
 pub struct TestFixture<'a> {
     pub env: Env,
@@ -13,12 +12,14 @@ pub struct TestFixture<'a> {
 
 impl<'a> TestFixture<'a> {
     pub fn new(env: &'a Env) -> Self {
+        env.mock_all_auths();
         let contract_id = env.register_contract(None, StrataFlowContract);
         let client = StrataFlowContractClient::new(env, &contract_id);
         let admin = Address::generate(env);
         let fee_recipient = Address::generate(env);
 
-        client.init(&admin, &fee_recipient, &100);
+        client.initialize(&admin);
+        client.set_fee_config(&100, &fee_recipient);
 
         TestFixture {
             env: env.clone(),
@@ -38,7 +39,9 @@ pub fn create_mock_token<'a>(
     soroban_sdk::token::Client<'a>,
     soroban_sdk::token::StellarAssetClient<'a>,
 ) {
-    let token_address = env.register_stellar_asset_contract(admin.clone());
+    let token_address = env
+        .register_stellar_asset_contract_v2(admin.clone())
+        .address();
     let token_client = soroban_sdk::token::Client::new(env, &token_address);
     let token_admin = soroban_sdk::token::StellarAssetClient::new(env, &token_address);
     (token_address, token_client, token_admin)
