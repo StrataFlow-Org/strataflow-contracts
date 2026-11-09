@@ -207,6 +207,10 @@ impl StrataFlowContract {
             return Err(Error::DeadlinePassed);
         }
 
+        if deadline.saturating_sub(env.ledger().timestamp()) > MAX_AGREEMENT_DURATION {
+            return Err(Error::DurationExceeded);
+        }
+
         let mut total_amount: i128 = 0;
         for i in 0..milestones.len() {
             let m = milestones.get(i).unwrap();

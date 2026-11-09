@@ -25,5 +25,6 @@ pub enum Error {
     DisputeTimeoutNotPassed = 19,
     InvalidAmount = 20,
     MilestoneNotSubmitted = 21,
+    DurationExceeded = 22,
     SameArbiter = 23,
 }
