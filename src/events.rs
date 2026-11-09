@@ -147,3 +147,7 @@ pub fn publish_dispute_verdict(
         (arbiter, verdict_hash),
     );
 }
+
+pub fn publish_protocol_init(env: &Env, admin: Address) {
+    env.events().publish((symbol_short!("init"),), admin);
+}

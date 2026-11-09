@@ -20,6 +20,7 @@ impl StrataFlowContract {
             .instance()
             .set(&DataKey::AgreementCounter, &0u64);
         env.storage().instance().set(&DataKey::IsPaused, &false);
+        publish_protocol_init(&env, admin.clone());
         bump_instance_ttl(&env);
         Ok(())
     }
