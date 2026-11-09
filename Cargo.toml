@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["winningtalker-commits"]
 license = "MIT"
 description = "Soroban smart contracts for StrataFlow programmable milestone escrows on Stellar"
+repository = "https://github.com/StrataFlow-Org/strataflow-contracts"
+readme = "README.md"
+keywords = ["stellar", "soroban", "escrow", "smart-contracts", "defi"]
+categories = ["cryptography::cryptocurrencies"]
 
 [lib]
 crate-type = ["rlib"]
@@ -28,4 +32,3 @@ lto = true
 [profile.release-with-logs]
 inherits = "release"
 debug-assertions = true
-
