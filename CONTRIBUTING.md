@@ -1,6 +1,6 @@
 # Contributing to StrataFlow Contracts
 
-Thank you for your interest in contributing to the **StrataFlow Soroban Smart Contracts**! This project participates in the **Stellar Drips Wave** and welcomes community contributions.
+Thank you for your interest in contributing to the **StrataFlow Soroban Smart Contracts**! This project welcomes open-source community contributions.
 
 ---
 

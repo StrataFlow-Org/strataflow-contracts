@@ -1,6 +1,6 @@
 # StrataFlow Contracts 📜
 
-[![Stellar Drips Wave](https://img.shields.io/badge/Stellar-Drips%20Wave%202026-blueviolet?style=for-the-badge&logo=stellar)](https://stellar.org)
+[![Stellar Soroban](https://img.shields.io/badge/Stellar-Soroban%20Smart%20Contracts-blueviolet?style=for-the-badge&logo=stellar)](https://stellar.org)
 [![Soroban v21+](https://img.shields.io/badge/Soroban-v21.7-blueviolet?style=for-the-badge&logo=rust)](https://soroban.stellar.org)
 [![Rust 1.79+](https://img.shields.io/badge/Rust-1.79+-DEA584?style=for-the-badge&logo=rust)](https://www.rust-lang.org)
 [![Clippy Strict](https://img.shields.io/badge/Clippy-0%20Warnings-brightgreen?style=for-the-badge)](https://rust-lang.github.io/rust-clippy/)
@@ -9,7 +9,7 @@
 [![CI Status](https://img.shields.io/github/actions/workflow/status/StrataFlow-Org/strataflow-contracts/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/StrataFlow-Org/strataflow-contracts/actions)
 
 > **Autonomous Milestone Escrow Smart Contracts on Stellar & Soroban.**  
-> Built for the **Stellar Drips Wave** evaluation. Enforces programmable milestone releases, non-custodial capital locking, cryptographic evidence submission, dispute resolution, and automated timeout refunds.
+> Enforces programmable milestone releases, non-custodial capital locking, cryptographic evidence submission, dispute resolution, and automated timeout refunds.
 
 ---
 
