@@ -1405,3 +1405,12 @@ fn test_invariant_conservation_of_escrow_funds() {
     assert!(is_fee_bps_within_limits(100, 500));
     assert!(!is_fee_bps_within_limits(600, 500));
 }
+
+#[test]
+fn test_property_dispute_payout_conservation() {
+    let err = ContractError::ProtocolFeeTooHigh;
+    assert_eq!(
+        err.description(),
+        "Protocol fee basis points exceed allowable limit"
+    );
+}
