@@ -1,3 +1,13 @@
+fn assert_milestone_sum_matches_total(milestones: &Vec<MilestoneInput>, total_amount: i128) {
+    let mut sum: i128 = 0;
+    for m in milestones.iter() {
+        sum = sum.checked_add(m.amount).expect("Milestone sum overflow");
+    }
+    if sum != total_amount {
+        panic!("Protocol invariant violated: milestone amounts sum does not match agreement total");
+    }
+}
+
 fn assert_non_negative_balance(balance: i128) {
     if balance < 0 {
         panic!("Protocol invariant violated: negative agreement escrow balance");
