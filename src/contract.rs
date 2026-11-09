@@ -81,6 +81,16 @@ impl StrataFlowContract {
         (1, 0, 0)
     }
 
+    /// Query comprehensive contract metadata
+    pub fn get_contract_metadata(env: Env) -> ContractMetadata {
+        ContractMetadata {
+            name: String::from_str(&env, "StrataFlow Protocol"),
+            version_major: 1,
+            version_minor: 0,
+            version_patch: 0,
+        }
+    }
+
     /// Upgrade contract executable code
     pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
         let admin: Address = env
