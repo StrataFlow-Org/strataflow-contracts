@@ -190,3 +190,7 @@ impl ContractError {
         }
     }
 }
+
+pub const fn is_fee_bps_within_limits(bps: u32, max_bps: u32) -> bool {
+    bps <= max_bps
+}
