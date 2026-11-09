@@ -135,3 +135,15 @@ pub fn publish_upgrade(env: &Env, new_wasm_hash: BytesN<32>) {
     env.events()
         .publish((symbol_short!("upgrade"),), new_wasm_hash);
 }
+
+pub fn publish_dispute_verdict(
+    env: &Env,
+    agreement_id: u64,
+    arbiter: Address,
+    verdict_hash: String,
+) {
+    env.events().publish(
+        (symbol_short!("verdict"), agreement_id),
+        (arbiter, verdict_hash),
+    );
+}
