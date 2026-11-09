@@ -756,6 +756,30 @@ impl StrataFlowContract {
         })
     }
 
+    /// Batch query agreement summaries to reduce RPC roundtrips
+    pub fn get_agreements_summary(env: Env, agreement_ids: Vec<u64>) -> Vec<AgreementSummary> {
+        let mut summaries = Vec::new(&env);
+        for i in 0..agreement_ids.len() {
+            let id = agreement_ids.get(i).unwrap();
+            if let Some(agreement) = load_agreement(&env, id) {
+                summaries.push_back(AgreementSummary {
+                    id: agreement.id,
+                    client: agreement.client,
+                    provider: agreement.provider,
+                    arbiter: agreement.arbiter,
+                    token: agreement.token,
+                    total_amount: agreement.total_amount,
+                    balance: agreement.balance,
+                    status: agreement.status,
+                    milestones_count: agreement.milestones.len(),
+                    deadline: agreement.deadline,
+                    created_at: agreement.created_at,
+                });
+            }
+        }
+        summaries
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
