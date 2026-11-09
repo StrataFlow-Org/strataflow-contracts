@@ -944,6 +944,11 @@ impl StrataFlowContract {
         get_milestone_rejections(&env, agreement_id, milestone_idx)
     }
 
+    /// Query cumulative protocol operational metrics
+    pub fn get_protocol_metrics(env: Env) -> ProtocolMetrics {
+        load_protocol_metrics(&env)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
