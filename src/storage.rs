@@ -87,3 +87,8 @@ pub fn save_protocol_metrics(env: &Env, metrics: &ProtocolMetrics) {
         .set(&DataKey::ProtocolMetrics, metrics);
     bump_instance_ttl(env);
 }
+
+pub const STORAGE_KEY_PREFIX_ADMIN: &str = "Admin";
+pub const STORAGE_KEY_PREFIX_AGREEMENT: &str = "Agreement";
+pub const STORAGE_KEY_PREFIX_DISPUTE: &str = "Dispute";
+pub const STORAGE_KEY_PREFIX_METRICS: &str = "ProtocolMetrics";
