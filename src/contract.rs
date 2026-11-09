@@ -138,7 +138,9 @@ impl StrataFlowContract {
             .get(&DataKey::Admin)
             .ok_or(Error::NotInitialized)?;
 
-        env.storage().instance().set(&DataKey::Admin, &pending_admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::Admin, &pending_admin);
         env.storage().instance().remove(&DataKey::PendingAdmin);
         publish_admin_transfer(&env, old_admin, pending_admin);
         Ok(())
@@ -728,10 +730,7 @@ impl StrataFlowContract {
     }
 
     /// Query all milestones for an agreement directly
-    pub fn get_agreement_milestones(
-        env: Env,
-        agreement_id: u64,
-    ) -> Result<Vec<Milestone>, Error> {
+    pub fn get_agreement_milestones(env: Env, agreement_id: u64) -> Result<Vec<Milestone>, Error> {
         let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
         Ok(agreement.milestones)
     }

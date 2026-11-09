@@ -86,7 +86,12 @@ pub fn publish_mutual_cancel(env: &Env, agreement_id: u64, client: Address, refu
     );
 }
 
-pub fn publish_reassign_arbiter(env: &Env, agreement_id: u64, old_arbiter: Address, new_arbiter: Address) {
+pub fn publish_reassign_arbiter(
+    env: &Env,
+    agreement_id: u64,
+    old_arbiter: Address,
+    new_arbiter: Address,
+) {
     env.events().publish(
         (symbol_short!("arb_chg"), agreement_id),
         (old_arbiter, new_arbiter),
