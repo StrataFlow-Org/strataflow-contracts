@@ -486,6 +486,7 @@ impl StrataFlowContract {
         agreement.milestones.set(milestone_idx, milestone);
 
         save_agreement(&env, &agreement);
+        increment_milestone_rejections(&env, agreement_id, milestone_idx);
 
         publish_reject(&env, agreement_id, milestone_idx, feedback_hash);
 
@@ -872,6 +873,11 @@ impl StrataFlowContract {
         } else {
             Ok(expire_time - now)
         }
+    }
+
+    /// Query number of times a milestone has been rejected for revision
+    pub fn get_milestone_rejection_count(env: Env, agreement_id: u64, milestone_idx: u32) -> u32 {
+        get_milestone_rejections(&env, agreement_id, milestone_idx)
     }
 
     /// Refresh persistent storage TTL for an agreement
