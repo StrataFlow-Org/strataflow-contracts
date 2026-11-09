@@ -671,6 +671,49 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Query timestamp when agreement dispute was initiated
+    pub fn get_dispute_timestamp(env: Env, agreement_id: u64) -> Option<u64> {
+        load_dispute_timestamp(&env, agreement_id)
+    }
+
+    /// Claim refund if dispute has been active beyond dispute window without arbiter resolution
+    pub fn resolve_dispute_timeout(env: Env, agreement_id: u64) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+
+        if agreement.status != AgreementStatus::Disputed {
+            return Err(Error::DisputeNotActive);
+        }
+
+        let dispute_ts =
+            load_dispute_timestamp(&env, agreement_id).ok_or(Error::DisputeNotActive)?;
+
+        if env.ledger().timestamp() < dispute_ts.saturating_add(DEFAULT_DISPUTE_WINDOW) {
+            return Err(Error::DisputeTimeoutNotPassed);
+        }
+
+        let refund_amount = agreement.balance;
+        agreement.balance = 0;
+        agreement.status = AgreementStatus::Cancelled;
+        save_agreement(&env, &agreement);
+        remove_dispute_timestamp(&env, agreement_id);
+
+        if refund_amount > 0 {
+            let token_client = token::Client::new(&env, &agreement.token);
+            token_client.transfer(
+                &env.current_contract_address(),
+                &agreement.client,
+                &refund_amount,
+            );
+        }
+
+        publish_dispute_timeout(&env, agreement_id, refund_amount);
+
+        Ok(())
+    }
+
     /// Query specific milestone details
     pub fn get_milestone(
         env: Env,
