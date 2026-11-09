@@ -1,3 +1,9 @@
+fn assert_non_negative_balance(balance: i128) {
+    if balance < 0 {
+        panic!("Protocol invariant violated: negative agreement escrow balance");
+    }
+}
+
 use crate::errors::Error;
 use crate::events::*;
 use crate::storage::*;
