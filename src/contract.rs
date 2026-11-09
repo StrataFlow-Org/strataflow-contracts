@@ -681,6 +681,10 @@ impl StrataFlowContract {
         save_agreement(&env, &agreement);
         set_dispute_timestamp(&env, agreement_id, env.ledger().timestamp());
 
+        let mut metrics = load_protocol_metrics(&env);
+        metrics.total_agreements_disputed = metrics.total_agreements_disputed.saturating_add(1);
+        save_protocol_metrics(&env, &metrics);
+
         publish_dispute(&env, agreement_id, milestone_idx, caller);
 
         Ok(())
