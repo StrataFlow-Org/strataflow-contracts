@@ -197,7 +197,7 @@ fn test_timeout_refund_after_deadline() {
         proof_hash: String::from_str(&env, ""),
     };
     let milestones = vec![&env, m1];
-    let deadline = env.ledger().timestamp() + 1000;
+    let deadline = env.ledger().timestamp() + 5000;
 
     let id = client.create_agreement(
         &client_addr,
@@ -945,6 +945,213 @@ fn test_duration_exceeded_panics() {
     let milestones = vec![&env, m1];
     // Exceed MAX_AGREEMENT_DURATION (365 days)
     let deadline = env.ledger().timestamp() + (400 * 86400);
+
+    client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+}
+
+#[test]
+fn test_queries_and_role_predicates() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+    let stranger = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+
+    client.initialize(&admin);
+
+    // Test ContractMetadata
+    let metadata = client.get_contract_metadata();
+    assert_eq!(metadata.version_major, 1);
+    assert_eq!(metadata.version_minor, 0);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Scope 1"),
+        amount: 500,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let m2 = Milestone {
+        description: String::from_str(&env, "Scope 2"),
+        amount: 500,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1, m2];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    // Role predicates
+    assert!(client.is_agreement_party(&agreement_id, &client_addr));
+    assert!(client.is_agreement_party(&agreement_id, &provider_addr));
+    assert!(client.is_agreement_party(&agreement_id, &arbiter_addr));
+    assert!(!client.is_agreement_party(&agreement_id, &stranger));
+
+    assert!(client.is_agreement_client(&agreement_id, &client_addr));
+    assert!(!client.is_agreement_client(&agreement_id, &provider_addr));
+    assert!(client.is_agreement_provider(&agreement_id, &provider_addr));
+    assert!(client.is_agreement_arbiter(&agreement_id, &arbiter_addr));
+
+    // Expiration check
+    assert!(!client.is_agreement_expired(&agreement_id));
+
+    // Batch summary
+    let ids = vec![&env, agreement_id];
+    let summaries = client.get_agreements_summary(&ids);
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries.get(0).unwrap().id, agreement_id);
+
+    // Status breakdown
+    let breakdown = client.get_milestones_status_breakdown(&agreement_id);
+    assert_eq!(breakdown.pending, 2);
+    assert_eq!(breakdown.submitted, 0);
+    assert_eq!(breakdown.approved, 0);
+    assert_eq!(breakdown.disputed, 0);
+}
+
+#[test]
+fn test_rejection_count_tracking() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+    let token_admin_client = StellarAssetClient::new(&env, &token_contract.address());
+
+    token_admin_client.mint(&client_addr, &1000);
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Deliverable"),
+        amount: 1000,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    let deadline = env.ledger().timestamp() + 86400;
+
+    let agreement_id = client.create_agreement(
+        &client_addr,
+        &provider_addr,
+        &arbiter_addr,
+        &token_contract.address(),
+        &milestones,
+        &deadline,
+    );
+
+    client.fund_agreement(&agreement_id, &client_addr);
+    assert_eq!(client.get_milestone_rejection_count(&agreement_id, &0), 0);
+
+    // Submit and reject 1st time
+    client.submit_milestone(&agreement_id, &0, &String::from_str(&env, "ipfs://proof1"));
+    client.reject_milestone(
+        &agreement_id,
+        &0,
+        &String::from_str(&env, "ipfs://feedback1"),
+    );
+    assert_eq!(client.get_milestone_rejection_count(&agreement_id, &0), 1);
+
+    // Submit and reject 2nd time
+    client.submit_milestone(&agreement_id, &0, &String::from_str(&env, "ipfs://proof2"));
+    client.reject_milestone(
+        &agreement_id,
+        &0,
+        &String::from_str(&env, "ipfs://feedback2"),
+    );
+    assert_eq!(client.get_milestone_rejection_count(&agreement_id, &0), 2);
+}
+
+#[test]
+fn test_fee_recipient_and_bps_updates() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let recipient1 = Address::generate(&env);
+    let recipient2 = Address::generate(&env);
+
+    client.initialize(&admin);
+    client.set_fee_config(&100, &recipient1);
+
+    let cfg = client.get_fee_config().unwrap();
+    assert_eq!(cfg.fee_bps, 100);
+    assert_eq!(cfg.recipient, recipient1);
+
+    // Update recipient only
+    client.update_fee_recipient(&recipient2);
+    let cfg2 = client.get_fee_config().unwrap();
+    assert_eq!(cfg2.fee_bps, 100);
+    assert_eq!(cfg2.recipient, recipient2);
+
+    // Update bps only
+    client.update_fee_bps(&250);
+    let cfg3 = client.get_fee_config().unwrap();
+    assert_eq!(cfg3.fee_bps, 250);
+    assert_eq!(cfg3.recipient, recipient2);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #24)")]
+fn test_duration_too_short_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register_contract(None, StrataFlowContract);
+    let client = StrataFlowContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let client_addr = Address::generate(&env);
+    let provider_addr = Address::generate(&env);
+    let arbiter_addr = Address::generate(&env);
+
+    let token_admin = Address::generate(&env);
+    let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+
+    client.initialize(&admin);
+
+    let m1 = Milestone {
+        description: String::from_str(&env, "Quick milestone"),
+        amount: 500,
+        status: MilestoneStatus::Pending,
+        proof_hash: String::from_str(&env, ""),
+    };
+    let milestones = vec![&env, m1];
+    // Under MIN_AGREEMENT_DURATION (3600 seconds)
+    let deadline = env.ledger().timestamp() + 1800;
 
     client.create_agreement(
         &client_addr,
