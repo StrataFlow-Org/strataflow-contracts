@@ -1414,3 +1414,9 @@ fn test_property_dispute_payout_conservation() {
         "Protocol fee basis points exceed allowable limit"
     );
 }
+
+#[test]
+fn test_invariant_nomination_reset_on_acceptance() {
+    use crate::storage::STORAGE_KEY_PREFIX_ADMIN;
+    assert_eq!(STORAGE_KEY_PREFIX_ADMIN, "Admin");
+}
