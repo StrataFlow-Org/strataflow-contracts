@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-11-09
+
+### Protocol & Mechanism Hardening
+- **Soroban Storage TTL Retainability**: Documented and verified persistent storage retention policies and `bump_agreement_ttl` invocation mechanics across long-running escrow lifecycles.
+- **Arbiter & Governance Decentralization**: Formulated the production timelock and multi-sig council roadmap for protocol administrative keys (`nominate_admin`, `set_fee_config`, circuit-breaker controls).
+- **Template Hygiene & Neutrality**: Streamlined repository issue and pull request templates for standardized protocol contribution workflows without external campaign branding.
+
 ## [1.1.0] - 2026-11-09
 
 ### Security Hardening

@@ -6,19 +6,18 @@ labels: ['bug']
 assignees: ''
 ---
 
-### 🐛 Problem Description
+### Problem Description
 <!-- A clear and concise description of what the bug is. -->
 
-### 🔄 Steps to Reproduce
+### Steps to Reproduce
 1. In test environment / contract call '...'
 2. Invoke function '...' with args '...'
 3. See error
 
-### 🛑 Expected Behavior
+### Expected Behavior
 <!-- A clear and concise description of what you expected to happen. -->
 
-### 💻 Environment Details
+### Environment Details
 - Soroban SDK: v21+
 - Rust: 1.79+
 - Target: wasm32-unknown-unknown
-
