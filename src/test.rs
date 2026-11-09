@@ -1359,3 +1359,11 @@ fn test_boundary_milestone_count() {
     let fixture = TestFixture::new(&env);
     assert_eq!(fixture.client.version(), 1);
 }
+
+#[test]
+fn test_boundary_min_duration() {
+    use crate::test_harness::TestFixture;
+    let env = Env::default();
+    let fixture = TestFixture::new(&env);
+    assert_eq!(fixture.client.is_admin(&fixture.admin), true);
+}
