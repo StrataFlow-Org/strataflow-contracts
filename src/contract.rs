@@ -727,6 +727,35 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Query count breakdown of milestones by status
+    pub fn get_milestones_status_breakdown(
+        env: Env,
+        agreement_id: u64,
+    ) -> Result<MilestonesStatusBreakdown, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        let mut pending = 0u32;
+        let mut submitted = 0u32;
+        let mut approved = 0u32;
+        let mut disputed = 0u32;
+
+        for i in 0..agreement.milestones.len() {
+            let m = agreement.milestones.get(i).unwrap();
+            match m.status {
+                MilestoneStatus::Pending => pending += 1,
+                MilestoneStatus::Submitted => submitted += 1,
+                MilestoneStatus::Approved => approved += 1,
+                MilestoneStatus::Disputed => disputed += 1,
+            }
+        }
+
+        Ok(MilestonesStatusBreakdown {
+            pending,
+            submitted,
+            approved,
+            disputed,
+        })
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
