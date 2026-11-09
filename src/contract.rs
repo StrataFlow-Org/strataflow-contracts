@@ -595,6 +595,7 @@ impl StrataFlowContract {
         agreement.status = AgreementStatus::Disputed;
 
         save_agreement(&env, &agreement);
+        set_dispute_timestamp(&env, agreement_id, env.ledger().timestamp());
 
         publish_dispute(&env, agreement_id, milestone_idx, caller);
 
@@ -629,6 +630,7 @@ impl StrataFlowContract {
         agreement.balance = 0;
         agreement.status = AgreementStatus::Resolved;
         save_agreement(&env, &agreement);
+        remove_dispute_timestamp(&env, agreement_id);
 
         let fee_config: Option<ProtocolFeeConfig> =
             env.storage().instance().get(&DataKey::FeeConfig);
