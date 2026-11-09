@@ -105,3 +105,12 @@ pub struct MilestonesStatusBreakdown {
     pub approved: u32,
     pub disputed: u32,
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContractMetadata {
+    pub name: String,
+    pub version_major: u32,
+    pub version_minor: u32,
+    pub version_patch: u32,
+}
