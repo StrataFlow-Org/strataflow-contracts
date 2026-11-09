@@ -500,6 +500,35 @@ impl StrataFlowContract {
         Ok(())
     }
 
+    /// Mutual arbiter reassignment: both client and provider agree to change dispute arbiter
+    pub fn reassign_arbiter(
+        env: Env,
+        agreement_id: u64,
+        new_arbiter: Address,
+    ) -> Result<(), Error> {
+        bump_instance_ttl(&env);
+        let mut agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+
+        agreement.client.require_auth();
+        agreement.provider.require_auth();
+
+        if new_arbiter == agreement.arbiter {
+            return Err(Error::SameArbiter);
+        }
+
+        if new_arbiter == agreement.client || new_arbiter == agreement.provider {
+            return Err(Error::Unauthorized);
+        }
+
+        let old_arbiter = agreement.arbiter.clone();
+        agreement.arbiter = new_arbiter.clone();
+        save_agreement(&env, &agreement);
+
+        publish_reassign_arbiter(&env, agreement_id, old_arbiter, new_arbiter);
+
+        Ok(())
+    }
+
     /// Claim refund of remaining escrow balance if provider misses deadline without completing all milestones
     pub fn claim_timeout_refund(env: Env, agreement_id: u64) -> Result<(), Error> {
         bump_instance_ttl(&env);
