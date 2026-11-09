@@ -469,6 +469,10 @@ impl StrataFlowContract {
 
         if all_approved {
             agreement.status = AgreementStatus::Completed;
+            let mut metrics = load_protocol_metrics(&env);
+            metrics.total_agreements_completed =
+                metrics.total_agreements_completed.saturating_add(1);
+            save_protocol_metrics(&env, &metrics);
         }
 
         // State committed before external token interaction
