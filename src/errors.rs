@@ -22,6 +22,7 @@ pub enum Error {
     CannotCancelFunded = 16,
     InvalidFeeBps = 17,
     NoPendingAdmin = 18,
+    DisputeTimeoutNotPassed = 19,
     MilestoneNotSubmitted = 21,
     SameArbiter = 23,
 }
