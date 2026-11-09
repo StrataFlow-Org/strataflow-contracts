@@ -780,6 +780,12 @@ impl StrataFlowContract {
         summaries
     }
 
+    /// Query remaining escrow balance for an agreement
+    pub fn get_remaining_escrow(env: Env, agreement_id: u64) -> Result<i128, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(agreement.balance)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
