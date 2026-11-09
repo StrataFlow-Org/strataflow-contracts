@@ -29,3 +29,17 @@ impl<'a> TestFixture<'a> {
         }
     }
 }
+
+pub fn create_mock_token<'a>(
+    env: &'a Env,
+    admin: &Address,
+) -> (
+    Address,
+    soroban_sdk::token::Client<'a>,
+    soroban_sdk::token::StellarAssetClient<'a>,
+) {
+    let token_address = env.register_stellar_asset_contract(admin.clone());
+    let token_client = soroban_sdk::token::Client::new(env, &token_address);
+    let token_admin = soroban_sdk::token::StellarAssetClient::new(env, &token_address);
+    (token_address, token_client, token_admin)
+}
