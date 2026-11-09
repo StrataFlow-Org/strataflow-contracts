@@ -851,6 +851,12 @@ impl StrataFlowContract {
         Ok(agreement.status == AgreementStatus::Completed)
     }
 
+    /// Check whether agreement deadline has passed relative to current ledger time
+    pub fn is_agreement_expired(env: Env, agreement_id: u64) -> Result<bool, Error> {
+        let agreement = load_agreement(&env, agreement_id).ok_or(Error::AgreementNotFound)?;
+        Ok(env.ledger().timestamp() >= agreement.deadline)
+    }
+
     /// Refresh persistent storage TTL for an agreement
     pub fn bump_agreement_ttl(env: Env, agreement_id: u64) -> Result<(), Error> {
         if !has_agreement(&env, agreement_id) {
