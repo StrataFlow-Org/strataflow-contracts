@@ -27,4 +27,5 @@ pub enum Error {
     MilestoneNotSubmitted = 21,
     DurationExceeded = 22,
     SameArbiter = 23,
+    AgreementDurationTooShort = 24,
 }
