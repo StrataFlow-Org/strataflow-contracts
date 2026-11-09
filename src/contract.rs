@@ -353,6 +353,12 @@ impl StrataFlowContract {
 
         save_agreement(&env, &agreement);
 
+        let mut metrics = load_protocol_metrics(&env);
+        metrics.total_escrow_volume = metrics
+            .total_escrow_volume
+            .saturating_add(agreement.total_amount);
+        save_protocol_metrics(&env, &metrics);
+
         publish_fund(&env, agreement_id, funder, agreement.total_amount);
 
         Ok(())
