@@ -22,4 +22,5 @@ pub enum Error {
     CannotCancelFunded = 16,
     InvalidFeeBps = 17,
     NoPendingAdmin = 18,
+    MilestoneNotSubmitted = 21,
 }

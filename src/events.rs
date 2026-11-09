@@ -72,6 +72,13 @@ pub fn publish_admin_nomination(env: &Env, current_admin: Address, pending_admin
         .publish((symbol_short!("nom_adm"),), (current_admin, pending_admin));
 }
 
+pub fn publish_reject(env: &Env, agreement_id: u64, milestone_idx: u32, feedback_hash: String) {
+    env.events().publish(
+        (symbol_short!("reject"), agreement_id, milestone_idx),
+        feedback_hash,
+    );
+}
+
 pub fn publish_fee_config(env: &Env, fee_bps: u32, recipient: Address) {
     env.events()
         .publish((symbol_short!("fee_cfg"),), (fee_bps, recipient));
