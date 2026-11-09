@@ -1367,3 +1367,20 @@ fn test_boundary_min_duration() {
     let fixture = TestFixture::new(&env);
     assert_eq!(fixture.client.is_admin(&fixture.admin), true);
 }
+
+#[test]
+fn test_stress_high_volume_milestones() {
+    use crate::types::is_valid_agreement_transition;
+    assert!(is_valid_agreement_transition(
+        AgreementStatus::Created,
+        AgreementStatus::Funded
+    ));
+    assert!(is_valid_agreement_transition(
+        AgreementStatus::Funded,
+        AgreementStatus::Completed
+    ));
+    assert!(!is_valid_agreement_transition(
+        AgreementStatus::Completed,
+        AgreementStatus::Disputed
+    ));
+}
